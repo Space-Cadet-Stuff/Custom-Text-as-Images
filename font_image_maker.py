@@ -11,9 +11,16 @@ import shutil
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import io
 import platform
-import glob
 import tempfile
 import math
+import re
+import subprocess
+
+# Optional imports - may not be available on all systems
+try:
+    import win32clipboard
+except ImportError:
+    win32clipboard = None
 
 class FontImageMaker:
     def __init__(self, root):
@@ -988,7 +995,6 @@ class FontImageMaker:
         ]
         
         # Remove version numbers and common patterns
-        import re
         font_name = re.sub(r'\s*\d+\.\d+.*$', '', font_name)
         font_name = re.sub(r'\s*\(.*\)$', '', font_name)
         
@@ -1574,7 +1580,6 @@ class FontImageMaker:
             display_image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
             
             # Convert to PhotoImage
-            import io
             output = io.BytesIO()
             display_image.save(output, format='PNG')
             output.seek(0)
@@ -1662,10 +1667,8 @@ class FontImageMaker:
         
         try:
             # For Windows, try using win32clipboard if available
-            if platform.system() == "Windows":
+            if platform.system() == "Windows" and win32clipboard is not None:
                 try:
-                    import win32clipboard
-                    
                     win32clipboard.OpenClipboard()
                     win32clipboard.EmptyClipboard()
                     
@@ -1685,14 +1688,12 @@ class FontImageMaker:
                     pass
             
             # Alternative method: save to temp file and use system clipboard
-            import tempfile
             temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
             self.preview_image.save(temp_file.name)
             temp_file.close()
             
             # Try to copy using system commands
             if platform.system() == "Windows":
-                import subprocess
                 try:
                     # Use PowerShell to copy image to clipboard
                     cmd = f'powershell.exe -command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Clipboard]::SetImage([System.Drawing.Image]::FromFile(\'{temp_file.name}\'))"'
