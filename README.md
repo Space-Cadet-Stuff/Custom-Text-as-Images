@@ -1,4 +1,4 @@
-# Font Image Maker
+![TextLab](/assets/title.png)
 
 A powerful desktop application that converts text into beautiful, customizable images with extensive styling options including gradients, glows, outlines, and custom fonts.
 
@@ -75,6 +75,7 @@ Font Image Maker/
 ├── README.md                  # Project documentation
 ├── QUICKSTART.md              # Quick start guide
 ├── HELP.md                    # Detailed help documentation
+├── assets/                   # Application assets
 ├── fonts/                     # Custom fonts storage
 ├── presets/                   # Saved styling presets
 │   ├── professional_preset.json

@@ -26,7 +26,19 @@ except ImportError:
 class FontImageMaker:
     def __init__(self, root):
         self.root = root
-        self.root.title("Font Image Maker")
+        self.root.title("TextLab")
+        
+        # Set icon for window and taskbar
+        try:
+            icon_path = os.path.join(os.path.dirname(__file__), "assets", "icon.ico")
+            if os.path.exists(icon_path):
+                # Set icon for both window and taskbar
+                self.root.iconbitmap(icon_path)
+                # Alternative method for taskbar icon (Windows-specific enhancement)
+                self.root.wm_iconbitmap(icon_path)
+        except Exception as e:
+            # If icon loading fails, continue without icon
+            print(f"Warning: Could not load icon: {e}")
         
         # Set responsive window size (80% of screen size, min 1000x700)
         screen_width = root.winfo_screenwidth()
