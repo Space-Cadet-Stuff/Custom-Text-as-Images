@@ -133,6 +133,9 @@ class FontImageMaker:
         self.create_general_controls()
         self.create_preview_panel()
         self.create_action_buttons()
+        
+        # Bind sidebar scrolling to all control widgets
+        self.root.after(200, lambda: self.bind_sidebar_scroll(self.scrollable_frame))
     
     def create_main_frames(self):
         """Create main layout frames with fixed sidebar width"""
@@ -160,10 +163,69 @@ class FontImageMaker:
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
         
-        # Bind mousewheel to canvas
-        def _on_mousewheel(event):
-            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        self.canvas.bind("<MouseWheel>", _on_mousewheel)
+        # Bind mousewheel to canvas for sidebar scrolling
+        def _on_sidebar_mousewheel(event):
+            try:
+                self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            except tk.TclError:
+                pass  # Ignore scroll errors when no content
+        
+        # Bind mousewheel events to multiple widgets in the sidebar for better coverage
+        self.canvas.bind("<MouseWheel>", _on_sidebar_mousewheel)
+        self.scrollable_frame.bind("<MouseWheel>", _on_sidebar_mousewheel)
+        self.left_frame.bind("<MouseWheel>", _on_sidebar_mousewheel)
+        
+        # Also bind to Button-4 and Button-5 for Linux compatibility
+        def _on_sidebar_button4(event):
+            try:
+                self.canvas.yview_scroll(-1, "units")
+            except tk.TclError:
+                pass
+                
+        def _on_sidebar_button5(event):
+            try:
+                self.canvas.yview_scroll(1, "units")
+            except tk.TclError:
+                pass
+        
+        self.canvas.bind("<Button-4>", _on_sidebar_button4)
+        self.canvas.bind("<Button-5>", _on_sidebar_button5)
+        self.scrollable_frame.bind("<Button-4>", _on_sidebar_button4)
+        self.scrollable_frame.bind("<Button-5>", _on_sidebar_button5)
+        
+        # Bind mouse enter events to ensure focus for scrolling
+        def _on_sidebar_enter(event):
+            # Focus the canvas for consistent scrolling behavior
+            self.canvas.focus_set()
+        
+        self.canvas.bind("<Enter>", _on_sidebar_enter)
+        self.scrollable_frame.bind("<Enter>", _on_sidebar_enter)
+        self.left_frame.bind("<Enter>", _on_sidebar_enter)
+        
+        # Make sidebar canvas focusable for keyboard navigation
+        self.canvas.configure(takefocus=True)
+        
+        # Bind keyboard scrolling for sidebar
+        def _on_sidebar_key_press(event):
+            if event.keysym == "Up":
+                self.canvas.yview_scroll(-1, "units")
+            elif event.keysym == "Down":
+                self.canvas.yview_scroll(1, "units")
+            elif event.keysym == "Prior":  # Page Up
+                self.canvas.yview_scroll(-10, "units")
+            elif event.keysym == "Next":   # Page Down
+                self.canvas.yview_scroll(10, "units")
+        
+        self.canvas.bind("<Key>", _on_sidebar_key_press)
+        
+        # Focus sidebar canvas when clicked
+        def _on_sidebar_click(event):
+            self.canvas.focus_set()
+        
+        self.canvas.bind("<Button-1>", _on_sidebar_click)
+        
+        # Store the sidebar scroll function for child widgets to use
+        self._sidebar_scroll_function = _on_sidebar_mousewheel
         
         # Right panel for preview - this will take remaining space
         self.right_frame = ttk.Frame(self.root)
@@ -171,6 +233,17 @@ class FontImageMaker:
         
         # Initial layout adjustment after frames are created
         self.root.after(100, self.adjust_preview_panel)
+    
+    def bind_sidebar_scroll(self, widget):
+        """Bind mouse wheel scrolling to a widget so it scrolls the sidebar"""
+        if hasattr(self, '_sidebar_scroll_function'):
+            widget.bind("<MouseWheel>", self._sidebar_scroll_function)
+            widget.bind("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))
+            widget.bind("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))
+            
+            # Recursively bind to all child widgets
+            for child in widget.winfo_children():
+                self.bind_sidebar_scroll(child)
     
     def on_window_resize(self, event):
         """Handle window resize events to adjust preview panel"""
@@ -467,6 +540,18 @@ class FontImageMaker:
         # Configure grid weights
         bg_frame.columnconfigure(1, weight=1)
     
+    def safe_get_numeric(self, var, default_value, min_val=None, max_val=None):
+        """Safely get numeric value from tkinter variable with fallback"""
+        try:
+            value = var.get()
+            if min_val is not None:
+                value = max(min_val, value)
+            if max_val is not None:
+                value = min(max_val, value)
+            return value
+        except (ValueError, tk.TclError):
+            return default_value
+    
     def create_general_controls(self):
         """Create general settings controls"""
         general_frame = ttk.LabelFrame(self.scrollable_frame, text="General Settings", padding=10)
@@ -593,27 +678,122 @@ class FontImageMaker:
         preview_frame = ttk.LabelFrame(self.right_frame, text="Preview", padding=10)
         preview_frame.pack(fill=tk.BOTH, expand=True)
         
+        # Create a frame to hold canvas and scrollbars
+        canvas_frame = ttk.Frame(preview_frame)
+        canvas_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
         # Create canvas for preview with dynamic sizing
-        self.preview_canvas = tk.Canvas(preview_frame, bg="white")
-        self.preview_canvas.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.preview_canvas = tk.Canvas(canvas_frame, bg="white")
         
         # Scrollbars for canvas
-        h_scroll = ttk.Scrollbar(preview_frame, orient=tk.HORIZONTAL, command=self.preview_canvas.xview)
-        h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
-        self.preview_canvas.configure(xscrollcommand=h_scroll.set)
+        h_scroll = ttk.Scrollbar(canvas_frame, orient=tk.HORIZONTAL, command=self.preview_canvas.xview)
+        v_scroll = ttk.Scrollbar(canvas_frame, orient=tk.VERTICAL, command=self.preview_canvas.yview)
         
-        v_scroll = ttk.Scrollbar(preview_frame, orient=tk.VERTICAL, command=self.preview_canvas.yview)
+        # Configure canvas scrolling
+        self.preview_canvas.configure(xscrollcommand=h_scroll.set, yscrollcommand=v_scroll.set)
+        
+        # Pack scrollbars and canvas
+        h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
         v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.preview_canvas.configure(yscrollcommand=v_scroll.set)
+        self.preview_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Bind mousewheel to canvas for scrolling
+        def _on_mousewheel(event):
+            # Check if the canvas has content to scroll
+            try:
+                self.preview_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            except tk.TclError:
+                pass  # Ignore scroll errors when no content
+        
+        def _on_shift_mousewheel(event):
+            # Horizontal scrolling with Shift+mouse wheel
+            try:
+                self.preview_canvas.xview_scroll(int(-1*(event.delta/120)), "units")
+            except tk.TclError:
+                pass  # Ignore scroll errors when no content
+        
+        # Bind mousewheel events to multiple widgets to ensure they work
+        self.preview_canvas.bind("<MouseWheel>", _on_mousewheel)
+        self.preview_canvas.bind("<Shift-MouseWheel>", _on_shift_mousewheel)
+        
+        # Also bind to the preview frame and canvas frame to catch mouse wheel events when hovering
+        preview_frame.bind("<MouseWheel>", _on_mousewheel)
+        preview_frame.bind("<Shift-MouseWheel>", _on_shift_mousewheel)
+        canvas_frame.bind("<MouseWheel>", _on_mousewheel)
+        canvas_frame.bind("<Shift-MouseWheel>", _on_shift_mousewheel)
+        
+        # Bind to the main window as well for global scrolling
+        def _on_enter(event):
+            # Give focus to canvas when mouse enters and bind wheel events
+            self.preview_canvas.focus_set()
+            
+        def _on_leave(event):
+            # Keep focus on canvas even when mouse leaves for consistent scrolling
+            pass
+        
+        # Bind mouse enter/leave events
+        self.preview_canvas.bind("<Enter>", _on_enter)
+        self.preview_canvas.bind("<Leave>", _on_leave)
+        canvas_frame.bind("<Enter>", _on_enter)
+        preview_frame.bind("<Enter>", _on_enter)
+        
+        # For Windows, also bind to Button-4 and Button-5 for better compatibility
+        def _on_button4(event):
+            try:
+                self.preview_canvas.yview_scroll(-1, "units")
+            except tk.TclError:
+                pass
+                
+        def _on_button5(event):
+            try:
+                self.preview_canvas.yview_scroll(1, "units")
+            except tk.TclError:
+                pass
+        
+        # Bind additional scroll events for better cross-platform compatibility
+        self.preview_canvas.bind("<Button-4>", _on_button4)
+        self.preview_canvas.bind("<Button-5>", _on_button5)
+        
+        # Make sure canvas gets initial focus
+        self.root.after(100, lambda: self.preview_canvas.focus_set())
+        
+        # Make canvas focusable for keyboard navigation
+        self.preview_canvas.configure(takefocus=True)
+        
+        # Bind keyboard scrolling
+        def _on_key_press(event):
+            if event.keysym == "Up":
+                self.preview_canvas.yview_scroll(-1, "units")
+            elif event.keysym == "Down":
+                self.preview_canvas.yview_scroll(1, "units")
+            elif event.keysym == "Left":
+                self.preview_canvas.xview_scroll(-1, "units")
+            elif event.keysym == "Right":
+                self.preview_canvas.xview_scroll(1, "units")
+            elif event.keysym == "Prior":  # Page Up
+                self.preview_canvas.yview_scroll(-10, "units")
+            elif event.keysym == "Next":   # Page Down
+                self.preview_canvas.yview_scroll(10, "units")
+        
+        self.preview_canvas.bind("<Key>", _on_key_press)
+        
+        # Focus canvas when clicked
+        def _on_canvas_click(event):
+            self.preview_canvas.focus_set()
+        
+        self.preview_canvas.bind("<Button-1>", _on_canvas_click)
         
         # Bind canvas resize to update scroll region
         self.preview_canvas.bind('<Configure>', self.on_canvas_configure)
     
     def on_canvas_configure(self, event):
         """Handle canvas resize events"""
-        # Update canvas scroll region when canvas size changes
-        if hasattr(self, 'preview_image') and self.preview_image:
-            self.preview_canvas.configure(scrollregion=self.preview_canvas.bbox("all"))
+        # Only handle canvas configure events, not child widget events
+        if event.widget == self.preview_canvas:
+            # Update canvas scroll region when canvas size changes
+            if hasattr(self, 'preview_image') and self.preview_image:
+                # Recalculate and redraw the image to fit the new canvas size
+                self.update_canvas(self.preview_image)
     
     def create_action_buttons(self):
         """Create file controls"""
@@ -942,8 +1122,15 @@ class FontImageMaker:
     
     def hex_to_rgb(self, hex_color):
         """Convert hex color to RGB tuple"""
-        hex_color = hex_color.lstrip('#')
-        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        try:
+            hex_color = hex_color.lstrip('#')
+            if len(hex_color) != 6:
+                # Invalid hex color, return black as fallback
+                return (0, 0, 0)
+            return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        except (ValueError, TypeError):
+            # Return black as fallback for any conversion errors
+            return (0, 0, 0)
     
     def get_font_path(self, font_name):
         """Get the path to a font file"""
@@ -966,6 +1153,18 @@ class FontImageMaker:
     def create_gradient(self, size, color1, color2, gradient_type, angle, gradient_size=100):
         """Create a gradient image with controllable gradient size"""
         width, height = size
+        
+        # Validate input parameters to prevent division by zero
+        if width <= 0 or height <= 0:
+            return Image.new('RGBA', (max(1, width), max(1, height)), color1)
+        
+        try:
+            gradient_size = max(1, min(100, gradient_size))  # Clamp to 1-100
+            angle = angle % 360 if angle else 0  # Handle None/empty angle
+        except (ValueError, TypeError):
+            gradient_size = 100
+            angle = 0
+        
         image = Image.new('RGBA', size, (0, 0, 0, 0))
         
         if gradient_type == "None":
@@ -987,6 +1186,10 @@ class FontImageMaker:
             
             # Find the maximum projection distance
             max_proj = abs(half_width * dx) + abs(half_height * dy)
+            
+            # Prevent division by zero
+            if max_proj == 0:
+                max_proj = 1
             
             # Calculate gradient size factor (0-1, where 0 is very sharp, 1 is full gradient)
             size_factor = gradient_size / 100.0
@@ -1017,7 +1220,7 @@ class FontImageMaker:
                             factor = 1
                         else:
                             # Remap to 0-1 within the gradient range
-                            factor = (factor - (center - gradient_range / 2)) / gradient_range
+                            factor = (factor - (center - gradient_range / 2)) / max(gradient_range, 0.001)  # Prevent division by zero
                     
                     # Blend colors
                     r = int(color1[0] * (1 - factor) + color2[0] * factor)
@@ -1031,6 +1234,10 @@ class FontImageMaker:
             # Radial gradient from center with gradient size control
             center_x, center_y = width // 2, height // 2
             max_distance = max(width, height) // 2
+            
+            # Prevent division by zero
+            if max_distance == 0:
+                max_distance = 1
             
             # Calculate gradient size factor
             size_factor = gradient_size / 100.0
@@ -1049,7 +1256,7 @@ class FontImageMaker:
                             factor = 1
                         else:
                             # Remap to 0-1 within the gradient range
-                            factor = factor / gradient_range
+                            factor = factor / max(gradient_range, 0.001)  # Prevent division by zero
                     
                     r = int(color1[0] * (1 - factor) + color2[0] * factor)
                     g = int(color1[1] * (1 - factor) + color2[1] * factor)
@@ -1088,7 +1295,7 @@ class FontImageMaker:
                             factor = 1
                         else:
                             # Remap to 0-1 within the gradient range
-                            factor = (factor - (transition_point - gradient_range / 2)) / gradient_range
+                            factor = (factor - (transition_point - gradient_range / 2)) / max(gradient_range, 0.001)  # Prevent division by zero
                     
                     r = int(color1[0] * (1 - factor) + color2[0] * factor)
                     g = int(color1[1] * (1 - factor) + color2[1] * factor)
@@ -1102,14 +1309,15 @@ class FontImageMaker:
     def update_preview(self):
         """Update the preview image"""
         try:
-            # Get current values
+            # Get current values with safe fallbacks
             text = self.text_var.get()
             if not text:
                 text = "Sample Text"
             
-            font_size = self.font_size_var.get()
-            width = self.image_width_var.get()
-            height = self.image_height_var.get()
+            # Safe value retrieval with fallbacks
+            font_size = self.safe_get_numeric(self.font_size_var, 48, 1)
+            width = self.safe_get_numeric(self.image_width_var, 800, 1)
+            height = self.safe_get_numeric(self.image_height_var, 400, 1)
             
             # Create image
             image = Image.new('RGBA', (width, height), (255, 255, 255, 0))
@@ -1118,7 +1326,7 @@ class FontImageMaker:
             # Create background
             bg_color1 = self.hex_to_rgb(self.bg_color_var.get())
             bg_color2 = self.hex_to_rgb(self.bg_color2_var.get())
-            bg_opacity = self.bg_opacity_var.get()
+            bg_opacity = self.safe_get_numeric(self.bg_opacity_var, 100, 0, 100)
             
             # Apply opacity to background colors
             bg_alpha = int(255 * bg_opacity / 100)
@@ -1126,9 +1334,12 @@ class FontImageMaker:
             bg_color2_rgba = bg_color2 + (bg_alpha,)
             
             if self.bg_gradient_var.get() != "None":
+                bg_gradient_angle = self.safe_get_numeric(self.bg_gradient_angle_var, 0)
+                bg_gradient_size = self.safe_get_numeric(self.bg_gradient_size_var, 100, 1, 100)
+                    
                 bg_gradient = self.create_gradient(
                     (width, height), bg_color1_rgba, bg_color2_rgba,
-                    self.bg_gradient_var.get(), self.bg_gradient_angle_var.get(), self.bg_gradient_size_var.get()
+                    self.bg_gradient_var.get(), bg_gradient_angle, bg_gradient_size
                 )
                 image = Image.alpha_composite(image, bg_gradient)
             else:
@@ -1160,10 +1371,10 @@ class FontImageMaker:
             text_height = bbox[3] - bbox[1]
             
             # Calculate position based on alignment and margins
-            margin_left = self.margin_left_var.get()
-            margin_right = self.margin_right_var.get()
-            margin_top = self.margin_top_var.get()
-            margin_bottom = self.margin_bottom_var.get()
+            margin_left = self.safe_get_numeric(self.margin_left_var, 10, 0)
+            margin_right = self.safe_get_numeric(self.margin_right_var, 10, 0)
+            margin_top = self.safe_get_numeric(self.margin_top_var, 10, 0)
+            margin_bottom = self.safe_get_numeric(self.margin_bottom_var, 10, 0)
             
             # Calculate available space for text positioning
             available_width = width - margin_left - margin_right
@@ -1197,8 +1408,8 @@ class FontImageMaker:
             
             # Draw glow effect first (bottom layer)
             glow_color = self.hex_to_rgb(self.text_glow_color_var.get())
-            glow_radius = self.glow_radius_var.get()
-            glow_intensity = self.glow_intensity_var.get()
+            glow_radius = self.safe_get_numeric(self.glow_radius_var, 5, 0)
+            glow_intensity = self.safe_get_numeric(self.glow_intensity_var, 19, 0, 100)
             glow_enabled = self.glow_enabled_var.get()
             
             if glow_enabled and glow_radius > 0 and glow_intensity > 0:
@@ -1213,8 +1424,8 @@ class FontImageMaker:
                 
                 # Create colored glow image with proper intensity
                 # Scale the percentage (0-100) to the internal range (0-400) for intensity calculation
-                actual_intensity = glow_intensity * 4  # Convert 0-100% to 0-400 range
-                glow_alpha = int(255 * actual_intensity / 100)
+                actual_intensity = max(1, glow_intensity * 4)  # Prevent zero intensity
+                glow_alpha = min(255, int(255 * actual_intensity / 100))  # Clamp to 255
                 glow_colored = Image.new('RGBA', (width, height), glow_color + (0,))
                 
                 # Convert mask to alpha channel with intensity applied
@@ -1222,7 +1433,7 @@ class FontImageMaker:
                 glow_alpha_data = []
                 
                 for pixel_value in glow_pixels:
-                    alpha = int((pixel_value / 255) * glow_alpha)
+                    alpha = int((pixel_value / 255) * glow_alpha) if glow_alpha > 0 else 0
                     glow_alpha_data.append(alpha)
                 
                 # Create alpha channel from processed data
@@ -1237,7 +1448,7 @@ class FontImageMaker:
             
             # Draw outline on separate layer (middle layer)
             outline_color = self.hex_to_rgb(self.text_outline_color_var.get())
-            outline_thickness = self.outline_thickness_var.get()
+            outline_thickness = self.safe_get_numeric(self.outline_thickness_var, 2, 0)
             
             if outline_thickness > 0:
                 outline_draw = ImageDraw.Draw(outline_layer)
@@ -1272,13 +1483,16 @@ class FontImageMaker:
                 text_actual_height = text_bottom - text_top
                 
                 # Create gradient for just the text size
+                text_gradient_angle = self.safe_get_numeric(self.text_gradient_angle_var, 0)
+                text_gradient_size = self.safe_get_numeric(self.text_gradient_size_var, 100, 1, 100)
+                    
                 text_gradient = self.create_gradient(
                     (text_actual_width, text_actual_height),
                     text_color1 + (255,),
                     text_color2 + (255,),
                     self.text_gradient_var.get(),
-                    self.text_gradient_angle_var.get(),
-                    self.text_gradient_size_var.get()
+                    text_gradient_angle,
+                    text_gradient_size
                 )
                 
                 # Create a full-size gradient image and paste the text-sized gradient at the actual text bounds
@@ -1317,7 +1531,17 @@ class FontImageMaker:
             # Update canvas
             self.update_canvas(image)
             
+        except ZeroDivisionError:
+            # Silent handling of division by zero - common when sliders are at zero
+            pass
+        except (ValueError, tk.TclError) as e:
+            # Silent handling of invalid numeric values - common during typing
+            if "floating point" in str(e) or "invalid literal" in str(e):
+                pass
+            else:
+                print(f"Preview update error: {e}")
         except Exception as e:
+            # Only print unexpected errors
             print(f"Preview update error: {e}")
     
     def update_canvas(self, image):
@@ -1334,6 +1558,11 @@ class FontImageMaker:
             
             # Calculate scaling
             img_width, img_height = image.size
+            
+            # Prevent division by zero
+            if img_width <= 0 or img_height <= 0:
+                return
+                
             scale_x = canvas_width / img_width
             scale_y = canvas_height / img_height
             scale = min(scale_x, scale_y, 1.0)  # Don't scale up
@@ -1341,10 +1570,10 @@ class FontImageMaker:
             new_width = int(img_width * scale)
             new_height = int(img_height * scale)
             
-            # Resize image
+            # Resize image for display
             display_image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
             
-            # Convert to PhotoImage using a different method
+            # Convert to PhotoImage
             import io
             output = io.BytesIO()
             display_image.save(output, format='PNG')
@@ -1354,18 +1583,45 @@ class FontImageMaker:
             
             # Clear canvas and display image
             self.preview_canvas.delete("all")
+            
+            # Center the image on the canvas
+            image_x = max(canvas_width // 2, new_width // 2)
+            image_y = max(canvas_height // 2, new_height // 2)
+            
             self.preview_canvas.create_image(
-                canvas_width // 2, canvas_height // 2,
+                image_x, image_y,
                 image=photo, anchor=tk.CENTER
             )
             
             # Store reference to prevent garbage collection
             self.preview_canvas.image = photo
             
-            # Update scroll region
-            self.preview_canvas.configure(scrollregion=self.preview_canvas.bbox("all"))
+            # Update scroll region to encompass the image
+            scroll_width = max(canvas_width, new_width)
+            scroll_height = max(canvas_height, new_height)
+            self.preview_canvas.configure(scrollregion=(0, 0, scroll_width, scroll_height))
             
+            # Enable scrollbars if image is larger than canvas
+            if new_width > canvas_width or new_height > canvas_height:
+                # Update the canvas to show scrollbars if needed
+                self.preview_canvas.update_idletasks()
+                
+                # Center the view if image is larger than canvas
+                if new_width > canvas_width:
+                    # Center horizontally
+                    self.preview_canvas.xview_moveto(0.5 - (canvas_width / new_width / 2))
+                if new_height > canvas_height:
+                    # Center vertically  
+                    self.preview_canvas.yview_moveto(0.5 - (canvas_height / new_height / 2))
+            
+        except ZeroDivisionError:
+            # Silent handling of division by zero - common when image dimensions are zero
+            pass
+        except (ValueError, tk.TclError) as e:
+            # Silent handling of invalid values during canvas updates
+            pass
         except Exception as e:
+            # Only print unexpected errors
             print(f"Canvas update error: {e}")
     
     def save_image(self):
