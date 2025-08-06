@@ -1,5 +1,5 @@
-# Font Image Maker Launcher (PowerShell)
-Write-Host "Font Image Maker Launcher" -ForegroundColor Green
+# TextLab Launcher (PowerShell)
+Write-Host "TextLab Launcher" -ForegroundColor Green
 Write-Host "=========================" -ForegroundColor Green
 
 # Check Python installation
@@ -25,14 +25,14 @@ try {
 }
 
 # Start the application
-Write-Host "`nStarting Font Image Maker..." -ForegroundColor Yellow
+Write-Host "`nStarting TextLab..." -ForegroundColor Yellow
 try {
-    python font_image_maker.py
+    python textlab.py
 } catch {
     Write-Host "Error starting application: $_" -ForegroundColor Red
     Read-Host "Press Enter to exit"
     exit 1
 }
 
-Write-Host "`nFont Image Maker has closed." -ForegroundColor Green
+Write-Host "`nTextLab has closed." -ForegroundColor Green
 Read-Host "Press Enter to exit"

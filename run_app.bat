@@ -1,5 +1,5 @@
 @echo off
-echo Font Image Maker Launcher
+echo TextLab Launcher
 echo =========================
 
 echo Checking Python installation...
@@ -21,11 +21,11 @@ if errorlevel 1 (
 )
 
 echo.
-echo Starting Font Image Maker...
-python font_image_maker.py
+echo Starting TextLab...
+python textlab.py
 if errorlevel 1 (
     echo.
-    echo Error: Font Image Maker failed to start
+    echo Error: TextLab failed to start
     echo Please check that Python and required packages are installed
     echo.
     echo Try running: python test_startup.py
@@ -33,5 +33,5 @@ if errorlevel 1 (
 )
 
 echo.
-echo Font Image Maker has closed.
+echo TextLab has closed.
 pause
