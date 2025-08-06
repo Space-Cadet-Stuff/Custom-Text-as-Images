@@ -42,6 +42,9 @@ class FontImageMaker:
         # Setup GUI
         self.setup_gui()
         
+        # Bind window resize to adjust layout
+        self.root.bind('<Configure>', self.on_window_resize)
+        
         # Update color button appearances
         self.update_color_buttons()
         
@@ -53,6 +56,9 @@ class FontImageMaker:
         
         # Initialize preview
         self.update_preview()
+        
+        # Final layout adjustment after everything is loaded
+        self.root.after(200, self.adjust_preview_panel)
     
     def setup_variables(self):
         """Initialize all tkinter variables"""
@@ -129,17 +135,16 @@ class FontImageMaker:
         self.create_action_buttons()
     
     def create_main_frames(self):
-        """Create main layout frames with calculated sidebar width"""
-        # Calculate required sidebar width based on actual content
-        required_width = self.calculate_required_sidebar_width()
+        """Create main layout frames with fixed sidebar width"""
+        SIDEBAR_WIDTH = 430
         
         # Left panel for controls with scrollbar
-        self.left_frame = ttk.Frame(self.root, width=required_width)
+        self.left_frame = ttk.Frame(self.root, width=SIDEBAR_WIDTH)
         self.left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=3, pady=3)
         self.left_frame.pack_propagate(False)
         
         # Create canvas and scrollbar for left frame
-        canvas_width = required_width - 20  # Account for scrollbar
+        canvas_width = SIDEBAR_WIDTH - 20
         self.canvas = tk.Canvas(self.left_frame, width=canvas_width)
         self.scrollbar = ttk.Scrollbar(self.left_frame, orient="vertical", command=self.canvas.yview)
         self.scrollable_frame = ttk.Frame(self.canvas)
@@ -163,123 +168,48 @@ class FontImageMaker:
         # Right panel for preview - this will take remaining space
         self.right_frame = ttk.Frame(self.root)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=3, pady=3)
+        
+        # Initial layout adjustment after frames are created
+        self.root.after(100, self.adjust_preview_panel)
     
-    def calculate_required_sidebar_width(self):
-        """Calculate the minimum required width for sidebar content"""
-        # Base measurements for typical UI elements (in pixels)
-        label_widths = {
-            "Text:": 40,
-            "Preset:": 50,
-            "Size:": 35,
-            "Font:": 35,
-            "Primary Color:": 85,
-            "Secondary Color (Optional):": 180,
-            "Gradient Type:": 85,
-            "Gradient Angle:": 90,
-            "Gradient Width:": 90,
-            "Outline Color:": 85,
-            "Outline Thickness:": 110,
-            "Glow Color:": 75,
-            "Glow Intensity:": 90,
-            "Glow Radius:": 85,
-            "Opacity:": 55,
-            "Gradient Angle:": 90,  # Background
-            "Image Size:": 75,
-            "Left:": 35,
-            "Right:": 40,
-            "Top:": 30,
-            "Bottom:": 50,
-            "Text Alignment:": 95
-        }
+    def on_window_resize(self, event):
+        """Handle window resize events to adjust preview panel"""
+        # Only handle main window resize events, not child widget events
+        if event.widget == self.root:
+            self.adjust_preview_panel()
+    
+    def adjust_preview_panel(self):
+        """Adjust preview panel size based on available space"""
+        # Get current window dimensions
+        window_width = self.root.winfo_width()
+        window_height = self.root.winfo_height()
         
-        control_widths = {
-            "entry_small": 60,      # Font size, margins
-            "entry_medium": 120,    # Text input, preset combo
-            "entry_large": 180,     # Full width entries
-            "button_small": 80,     # Color buttons
-            "button_medium": 100,   # Select Font, Save Preset
-            "combo_small": 100,     # Gradient type
-            "combo_medium": 120,    # Preset dropdown
-            "scale_small": 80,      # Small sliders
-            "scale_medium": 120,    # Medium sliders
-            "spinbox": 80,          # Image size spinboxes
-            "checkbox": 90,         # Enable Glow
-            "radiobutton": 80       # Alignment buttons (3 per row)
-        }
+        # Use fixed sidebar width
+        sidebar_width = 415
         
-        # Calculate maximum width needed for each section
-        max_widths = []
+        # Calculate available space for preview
+        # Account for: sidebar width + padding between panels + outer padding
+        total_padding = 12
+        available_width = window_width - sidebar_width - total_padding
         
-        # Text Settings section
-        text_section_rows = [
-            ("Text:", "entry_large"),  # 40 + 180 = 220
-            ("Preset:", "combo_medium", "button_medium"),  # 50 + 120 + 100 = 270
-            ("Size:", "scale_medium", "entry_small"),  # 35 + 120 + 60 = 215
-            ("Font:", "entry_large", "button_medium", "button_medium"),  # 35 + 180 + 100 + 100 = 415
-            ("Primary Color:", "button_small"),  # 85 + 80 = 165
-            ("Secondary Color (Optional):", "button_small"),  # 180 + 80 = 260
-            ("Gradient Type:", "combo_small"),  # 85 + 100 = 185
-            ("Gradient Angle:", "scale_medium", "entry_small"),  # 90 + 120 + 60 = 270
-            ("Gradient Width:", "scale_medium", "entry_small"),  # 90 + 120 + 60 = 270
-            ("Outline Color:", "button_small"),  # 85 + 80 = 165
-            ("Outline Thickness:", "scale_medium", "entry_small"),  # 110 + 120 + 60 = 290
-            ("Glow Color:", "button_small", "checkbox"),  # 75 + 80 + 90 = 245
-            ("Glow Intensity:", "scale_medium", "entry_small"),  # 90 + 120 + 60 = 270
-            ("Glow Radius:", "scale_medium", "entry_small"),  # 85 + 120 + 60 = 265
-        ]
+        # Ensure minimum preview width
+        min_preview_width = 400
+        if available_width < min_preview_width:
+            available_width = min_preview_width
         
-        for row in text_section_rows:
-            row_width = label_widths.get(row[0], 50)  # Label width
-            for control in row[1:]:
-                row_width += control_widths.get(control, 50)
-            max_widths.append(row_width)
-        
-        # Background Settings section  
-        bg_section_rows = [
-            ("Opacity:", "scale_medium", "entry_small"),  # 55 + 120 + 60 = 235
-            ("Primary Color:", "button_small"),  # 85 + 80 = 165
-            ("Secondary Color (Optional):", "button_small"),  # 180 + 80 = 260
-            ("Gradient Type:", "combo_small"),  # 85 + 100 = 185
-            ("Gradient Angle:", "scale_medium", "entry_small"),  # 90 + 120 + 60 = 270
-            ("Gradient Width:", "scale_medium", "entry_small"),  # 90 + 120 + 60 = 270
-        ]
-        
-        for row in bg_section_rows:
-            row_width = label_widths.get(row[0], 50)
-            for control in row[1:]:
-                row_width += control_widths.get(control, 50)
-            max_widths.append(row_width)
-        
-        # General Settings section
-        general_section_rows = [
-            ("Image Size:", "spinbox", "spinbox"),  # 75 + 80 + 80 = 235
-            ("Left:", "scale_small", "entry_small"),  # 35 + 80 + 60 = 175
-            ("Text Alignment:", "radiobutton", "radiobutton", "radiobutton"),  # 95 + 80*3 = 335
-        ]
-        
-        for row in general_section_rows:
-            row_width = label_widths.get(row[0], 50)
-            for control in row[1:]:
-                row_width += control_widths.get(control, 50)
-            max_widths.append(row_width)
-        
-        # Get the maximum width needed
-        content_width = max(max_widths)
-        
-        # Add padding and margins
-        frame_padding = 20  # LabelFrame padding (10px each side)
-        grid_spacing = 10   # Space between grid columns
-        scrollbar_width = 20
-        outer_padding = 6   # Frame padding (3px each side)
-        
-        total_width = content_width + frame_padding + grid_spacing + scrollbar_width + outer_padding
-        
-        # Ensure minimum usable width
-        min_width = 250
-        calculated_width = max(min_width, total_width)
-        
-        print(f"Calculated sidebar width: {calculated_width}px (content: {content_width}px)")
-        return calculated_width
+        # Update right frame to use calculated width
+        if hasattr(self, 'right_frame'):
+            # Force update the right frame to fill remaining space efficiently
+            self.right_frame.pack_configure(fill=tk.BOTH, expand=True)
+            
+            # Update preview canvas size hints if it exists
+            if hasattr(self, 'preview_canvas'):
+                # Set a reasonable default size for the canvas based on available space
+                canvas_width = max(400, available_width - 30)  # Account for scrollbars and padding
+                canvas_height = max(300, window_height - 150)  # Account for title bar and padding
+                
+                # Don't force exact size, but provide size hints
+                self.preview_canvas.configure(width=canvas_width, height=canvas_height)
     
     def create_text_controls(self):
         """Create text customization controls"""
@@ -340,12 +270,15 @@ class FontImageMaker:
         upload_font_btn = ttk.Button(font_frame, text="Upload Font", command=self.upload_font)
         upload_font_btn.pack(side=tk.RIGHT)
         
+        # Add blank line after Font
+        ttk.Label(text_frame, text="").grid(row=3, column=3, pady=5)
+        
         # Text colors
         ttk.Label(text_frame, text="Primary Color:").grid(row=4, column=0, sticky=tk.W, pady=2)
         self.text_color_btn = tk.Button(text_frame, width=10, command=lambda: self.choose_color(self.text_color_var, self.text_color_btn))
         self.text_color_btn.grid(row=4, column=1, sticky=tk.W, pady=2)
         
-        ttk.Label(text_frame, text="Secondary Color (Optional):").grid(row=5, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Secondary Color\n(Optional):").grid(row=5, column=0, sticky=tk.W, pady=2)
         self.text_color2_btn = tk.Button(text_frame, width=10, command=lambda: self.choose_color(self.text_color2_var, self.text_color2_btn))
         self.text_color2_btn.grid(row=5, column=1, sticky=tk.W, pady=2)
         
@@ -388,13 +321,16 @@ class FontImageMaker:
         self.gradient_size_entry.bind('<Return>', lambda e: self.update_preview())
         self.gradient_size_entry.bind('<FocusOut>', lambda e: self.update_preview())
         
+        # Add blank line after Gradient Width
+        ttk.Label(text_frame, text="").grid(row=8, column=3, pady=5)
+        
         # Text outline
         ttk.Label(text_frame, text="Outline Color:").grid(row=9, column=0, sticky=tk.W, pady=2)
         self.outline_color_btn = tk.Button(text_frame, width=10, command=lambda: self.choose_color(self.text_outline_color_var, self.outline_color_btn))
         self.outline_color_btn.grid(row=9, column=1, sticky=tk.W, pady=2)
         
         # Outline thickness
-        ttk.Label(text_frame, text="Outline Thickness:").grid(row=10, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Outline\nThickness:").grid(row=10, column=0, sticky=tk.W, pady=2)
         outline_frame = ttk.Frame(text_frame)
         outline_frame.grid(row=10, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
@@ -408,6 +344,9 @@ class FontImageMaker:
         self.outline_entry.pack(side=tk.RIGHT, padx=(5, 0))
         self.outline_entry.bind('<Return>', lambda e: self.update_preview())
         self.outline_entry.bind('<FocusOut>', lambda e: self.update_preview())
+        
+        # Add blank line after Outline Thickness
+        ttk.Label(text_frame, text="").grid(row=10, column=3, pady=5)
         
         # Text glow
         ttk.Label(text_frame, text="Glow Color:").grid(row=11, column=0, sticky=tk.W, pady=2)
@@ -474,12 +413,15 @@ class FontImageMaker:
         self.opacity_entry.bind('<Return>', lambda e: self.update_preview())
         self.opacity_entry.bind('<FocusOut>', lambda e: self.update_preview())
         
+        # Add blank line after Opacity
+        ttk.Label(bg_frame, text="").grid(row=0, column=3, pady=5)
+        
         # Background colors
         ttk.Label(bg_frame, text="Primary Color:").grid(row=1, column=0, sticky=tk.W, pady=2)
         self.bg_color_btn = tk.Button(bg_frame, width=10, command=lambda: self.choose_color(self.bg_color_var, self.bg_color_btn))
         self.bg_color_btn.grid(row=1, column=1, sticky=tk.W, pady=2)
         
-        ttk.Label(bg_frame, text="Secondary Color (Optional):").grid(row=2, column=0, sticky=tk.W, pady=2)
+        ttk.Label(bg_frame, text="Secondary Color\n(Optional):").grid(row=2, column=0, sticky=tk.W, pady=2)
         self.bg_color2_btn = tk.Button(bg_frame, width=10, command=lambda: self.choose_color(self.bg_color2_var, self.bg_color2_btn))
         self.bg_color2_btn.grid(row=2, column=1, sticky=tk.W, pady=2)
         
@@ -618,7 +560,7 @@ class FontImageMaker:
         self.bottom_margin_entry.bind('<FocusOut>', lambda e: self.update_preview())
         
         # Text alignment
-        ttk.Label(general_frame, text="Text Alignment:").grid(row=5, column=0, sticky=tk.NW, pady=5)
+        ttk.Label(general_frame, text="Text\nAlignment:").grid(row=5, column=0, sticky=tk.NW, pady=5)
         
         alignment_frame = ttk.Frame(general_frame)
         alignment_frame.grid(row=5, column=1, columnspan=2, sticky=tk.EW, pady=5)
@@ -651,8 +593,8 @@ class FontImageMaker:
         preview_frame = ttk.LabelFrame(self.right_frame, text="Preview", padding=10)
         preview_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Create canvas for preview
-        self.preview_canvas = tk.Canvas(preview_frame, bg="white", width=600, height=400)
+        # Create canvas for preview with dynamic sizing
+        self.preview_canvas = tk.Canvas(preview_frame, bg="white")
         self.preview_canvas.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Scrollbars for canvas
@@ -663,6 +605,15 @@ class FontImageMaker:
         v_scroll = ttk.Scrollbar(preview_frame, orient=tk.VERTICAL, command=self.preview_canvas.yview)
         v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.preview_canvas.configure(yscrollcommand=v_scroll.set)
+        
+        # Bind canvas resize to update scroll region
+        self.preview_canvas.bind('<Configure>', self.on_canvas_configure)
+    
+    def on_canvas_configure(self, event):
+        """Handle canvas resize events"""
+        # Update canvas scroll region when canvas size changes
+        if hasattr(self, 'preview_image') and self.preview_image:
+            self.preview_canvas.configure(scrollregion=self.preview_canvas.bbox("all"))
     
     def create_action_buttons(self):
         """Create file controls"""
