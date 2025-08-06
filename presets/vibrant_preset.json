@@ -1,0 +1,23 @@
+{
+  "text": "SAMPLE PRESET",
+  "font_size": 72,
+  "font": "Arial",
+  "text_color": "#FF6B35",
+  "text_color2": "#F7931E",
+  "text_outline_color": "#FFFFFF",
+  "text_glow_color": "#FF0000",
+  "glow_intensity": 80,
+  "glow_radius": 5,
+  "glow_enabled": true,
+  "outline_thickness": 3,
+  "text_gradient": "Linear",
+  "text_gradient_angle": 45,
+  "bg_opacity": 80,
+  "bg_color": "#1E3A8A",
+  "bg_color2": "#3B82F6",
+  "bg_gradient": "Radial",
+  "bg_gradient_angle": 0,
+  "image_width": 1000,
+  "image_height": 500,
+  "alignment": "center"
+}

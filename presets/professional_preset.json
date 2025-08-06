@@ -1,0 +1,23 @@
+{
+  "text": "Professional Text",
+  "font_size": 56,
+  "font": "Times New Roman",
+  "text_color": "#2C3E50",
+  "text_color2": "#34495E",
+  "text_outline_color": "#ECF0F1",
+  "text_glow_color": "#BDC3C7",
+  "glow_intensity": 30,
+  "glow_radius": 2,
+  "glow_enabled": false,
+  "outline_thickness": 1,
+  "text_gradient": "None",
+  "text_gradient_angle": 0,
+  "bg_opacity": 100,
+  "bg_color": "#FFFFFF",
+  "bg_color2": "#F8F9FA",
+  "bg_gradient": "Linear",
+  "bg_gradient_angle": 90,
+  "image_width": 800,
+  "image_height": 300,
+  "alignment": "center"
+}
