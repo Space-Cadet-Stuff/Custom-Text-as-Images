@@ -49,14 +49,15 @@ class FontImageMaker:
         self.text_glow_color_var = tk.StringVar(value="#0000FF")
         
         # Text effects
-        self.glow_intensity_var = tk.IntVar(value=75)  # Increased from 50 to 75
-        self.glow_radius_var = tk.IntVar(value=5)      # Increased from 3 to 5
-        self.outline_thickness_var = tk.IntVar(value=2) # pixels
-        self.glow_enabled_var = tk.BooleanVar(value=True)  # glow on/off
+        self.glow_intensity_var = tk.IntVar(value=19)  # 19% = 75 in old scale (75/4 = 18.75 ≈ 19)
+        self.glow_radius_var = tk.IntVar(value=5)
+        self.outline_thickness_var = tk.IntVar(value=2)
+        self.glow_enabled_var = tk.BooleanVar(value=True)
         
         # Text gradient
         self.text_gradient_var = tk.StringVar(value="None")
         self.text_gradient_angle_var = tk.IntVar(value=0)
+        self.text_gradient_size_var = tk.IntVar(value=100)
         
         # Background variables
         self.bg_opacity_var = tk.IntVar(value=100)
@@ -68,6 +69,12 @@ class FontImageMaker:
         # Image size
         self.image_width_var = tk.IntVar(value=800)
         self.image_height_var = tk.IntVar(value=400)
+        
+        # Margins/Padding
+        self.margin_left_var = tk.IntVar(value=10)
+        self.margin_right_var = tk.IntVar(value=10)
+        self.margin_top_var = tk.IntVar(value=10)
+        self.margin_bottom_var = tk.IntVar(value=10)
         
         # Alignment
         self.alignment_var = tk.StringVar(value="center")
@@ -212,7 +219,7 @@ class FontImageMaker:
         glow_intensity_frame = ttk.Frame(text_frame)
         glow_intensity_frame.grid(row=9, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
-        glow_intensity_scale = ttk.Scale(glow_intensity_frame, from_=0, to=400, orient=tk.HORIZONTAL,
+        glow_intensity_scale = ttk.Scale(glow_intensity_frame, from_=0, to=100, orient=tk.HORIZONTAL,
                                        variable=self.glow_intensity_var, command=lambda v: self.update_preview())
         glow_intensity_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
@@ -261,6 +268,22 @@ class FontImageMaker:
         self.gradient_angle_entry.bind('<FocusOut>', lambda e: self.update_preview())
         
         ttk.Label(gradient_angle_frame, text="°").pack(side=tk.RIGHT, padx=(1, 5))
+        
+        # Gradient size
+        ttk.Label(text_frame, text="Gradient Size:").grid(row=13, column=0, sticky=tk.W, pady=2)
+        gradient_size_frame = ttk.Frame(text_frame)
+        gradient_size_frame.grid(row=13, column=1, columnspan=2, sticky=tk.EW, pady=2)
+        
+        gradient_size_scale = ttk.Scale(gradient_size_frame, from_=0, to=100, orient=tk.HORIZONTAL, 
+                                      variable=self.text_gradient_size_var, command=lambda v: self.update_preview())
+        gradient_size_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        self.gradient_size_entry = ttk.Entry(gradient_size_frame, textvariable=self.text_gradient_size_var, width=6)
+        self.gradient_size_entry.pack(side=tk.RIGHT, padx=(5, 0))
+        self.gradient_size_entry.bind('<Return>', lambda e: self.update_preview())
+        self.gradient_size_entry.bind('<FocusOut>', lambda e: self.update_preview())
+        
+        ttk.Label(gradient_size_frame, text="%").pack(side=tk.RIGHT, padx=(1, 5))
         
         # Configure grid weights
         text_frame.columnconfigure(1, weight=1)
@@ -346,11 +369,78 @@ class FontImageMaker:
         
         ttk.Label(size_frame, text=" px").pack(side=tk.LEFT)
         
+        # Margins/Padding
+        ttk.Label(general_frame, text="Margins:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        
+        # Left margin
+        ttk.Label(general_frame, text="Left:").grid(row=1, column=1, sticky=tk.W, pady=2, padx=(0, 5))
+        left_margin_frame = ttk.Frame(general_frame)
+        left_margin_frame.grid(row=1, column=2, sticky=tk.EW, pady=2)
+        
+        left_margin_scale = ttk.Scale(left_margin_frame, from_=0, to=100, orient=tk.HORIZONTAL,
+                                    variable=self.margin_left_var, command=lambda v: self.update_preview())
+        left_margin_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        self.left_margin_entry = ttk.Entry(left_margin_frame, textvariable=self.margin_left_var, width=6)
+        self.left_margin_entry.pack(side=tk.RIGHT, padx=(5, 0))
+        self.left_margin_entry.bind('<Return>', lambda e: self.update_preview())
+        self.left_margin_entry.bind('<FocusOut>', lambda e: self.update_preview())
+        
+        ttk.Label(left_margin_frame, text="px").pack(side=tk.RIGHT, padx=(1, 5))
+        
+        # Right margin
+        ttk.Label(general_frame, text="Right:").grid(row=2, column=1, sticky=tk.W, pady=2, padx=(0, 5))
+        right_margin_frame = ttk.Frame(general_frame)
+        right_margin_frame.grid(row=2, column=2, sticky=tk.EW, pady=2)
+        
+        right_margin_scale = ttk.Scale(right_margin_frame, from_=0, to=100, orient=tk.HORIZONTAL,
+                                     variable=self.margin_right_var, command=lambda v: self.update_preview())
+        right_margin_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        self.right_margin_entry = ttk.Entry(right_margin_frame, textvariable=self.margin_right_var, width=6)
+        self.right_margin_entry.pack(side=tk.RIGHT, padx=(5, 0))
+        self.right_margin_entry.bind('<Return>', lambda e: self.update_preview())
+        self.right_margin_entry.bind('<FocusOut>', lambda e: self.update_preview())
+        
+        ttk.Label(right_margin_frame, text="px").pack(side=tk.RIGHT, padx=(1, 5))
+        
+        # Top margin
+        ttk.Label(general_frame, text="Top:").grid(row=3, column=1, sticky=tk.W, pady=2, padx=(0, 5))
+        top_margin_frame = ttk.Frame(general_frame)
+        top_margin_frame.grid(row=3, column=2, sticky=tk.EW, pady=2)
+        
+        top_margin_scale = ttk.Scale(top_margin_frame, from_=0, to=100, orient=tk.HORIZONTAL,
+                                   variable=self.margin_top_var, command=lambda v: self.update_preview())
+        top_margin_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        self.top_margin_entry = ttk.Entry(top_margin_frame, textvariable=self.margin_top_var, width=6)
+        self.top_margin_entry.pack(side=tk.RIGHT, padx=(5, 0))
+        self.top_margin_entry.bind('<Return>', lambda e: self.update_preview())
+        self.top_margin_entry.bind('<FocusOut>', lambda e: self.update_preview())
+        
+        ttk.Label(top_margin_frame, text="px").pack(side=tk.RIGHT, padx=(1, 5))
+        
+        # Bottom margin
+        ttk.Label(general_frame, text="Bottom:").grid(row=4, column=1, sticky=tk.W, pady=2, padx=(0, 5))
+        bottom_margin_frame = ttk.Frame(general_frame)
+        bottom_margin_frame.grid(row=4, column=2, sticky=tk.EW, pady=2)
+        
+        bottom_margin_scale = ttk.Scale(bottom_margin_frame, from_=0, to=100, orient=tk.HORIZONTAL,
+                                      variable=self.margin_bottom_var, command=lambda v: self.update_preview())
+        bottom_margin_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        self.bottom_margin_entry = ttk.Entry(bottom_margin_frame, textvariable=self.margin_bottom_var, width=6)
+        self.bottom_margin_entry.pack(side=tk.RIGHT, padx=(5, 0))
+        self.bottom_margin_entry.bind('<Return>', lambda e: self.update_preview())
+        self.bottom_margin_entry.bind('<FocusOut>', lambda e: self.update_preview())
+        
+        ttk.Label(bottom_margin_frame, text="px").pack(side=tk.RIGHT, padx=(1, 5))
+        
         # Text alignment
-        ttk.Label(general_frame, text="Text Alignment:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Label(general_frame, text="Text Alignment:").grid(row=5, column=0, sticky=tk.W, pady=5)
         
         alignment_frame = ttk.Frame(general_frame)
-        alignment_frame.grid(row=1, column=1, columnspan=2, sticky=tk.EW, pady=5)
+        alignment_frame.grid(row=5, column=1, columnspan=2, sticky=tk.EW, pady=5)
         
         # Create 3x3 grid of alignment buttons
         alignments = [
@@ -497,8 +587,8 @@ class FontImageMaker:
         # For system fonts, we'll use default
         return None
     
-    def create_gradient(self, size, color1, color2, gradient_type, angle):
-        """Create a gradient image"""
+    def create_gradient(self, size, color1, color2, gradient_type, angle, gradient_size=100):
+        """Create a gradient image with controllable gradient size"""
         width, height = size
         image = Image.new('RGBA', size, (0, 0, 0, 0))
         
@@ -506,7 +596,7 @@ class FontImageMaker:
             # Solid color
             image = Image.new('RGBA', size, color1)
         elif gradient_type == "Linear":
-            # Linear gradient with proper angle support
+            # Linear gradient with proper angle support and gradient size control
             import math
             
             # Convert angle to radians
@@ -523,6 +613,9 @@ class FontImageMaker:
             # Find the maximum projection distance
             max_proj = abs(half_width * dx) + abs(half_height * dy)
             
+            # Calculate gradient size factor (0-1, where 0 is very sharp, 1 is full gradient)
+            size_factor = gradient_size / 100.0
+            
             for y in range(height):
                 for x in range(width):
                     # Calculate position relative to center
@@ -536,6 +629,21 @@ class FontImageMaker:
                     factor = (projection + max_proj) / (2 * max_proj)
                     factor = max(0, min(1, factor))
                     
+                    # Apply gradient size control
+                    if size_factor < 1.0:
+                        # Compress the gradient range
+                        center = 0.5
+                        gradient_range = size_factor
+                        
+                        # Map factor to compressed range around center
+                        if factor < center - gradient_range / 2:
+                            factor = 0
+                        elif factor > center + gradient_range / 2:
+                            factor = 1
+                        else:
+                            # Remap to 0-1 within the gradient range
+                            factor = (factor - (center - gradient_range / 2)) / gradient_range
+                    
                     # Blend colors
                     r = int(color1[0] * (1 - factor) + color2[0] * factor)
                     g = int(color1[1] * (1 - factor) + color2[1] * factor)
@@ -545,14 +653,28 @@ class FontImageMaker:
                     image.putpixel((x, y), (r, g, b, a))
                     
         elif gradient_type == "Radial":
-            # Radial gradient from center
+            # Radial gradient from center with gradient size control
             center_x, center_y = width // 2, height // 2
             max_distance = max(width, height) // 2
+            
+            # Calculate gradient size factor
+            size_factor = gradient_size / 100.0
             
             for y in range(height):
                 for x in range(width):
                     distance = ((x - center_x) ** 2 + (y - center_y) ** 2) ** 0.5
                     factor = min(distance / max_distance, 1.0)
+                    
+                    # Apply gradient size control
+                    if size_factor < 1.0:
+                        # Compress the gradient range
+                        gradient_range = size_factor
+                        
+                        if factor > gradient_range:
+                            factor = 1
+                        else:
+                            # Remap to 0-1 within the gradient range
+                            factor = factor / gradient_range
                     
                     r = int(color1[0] * (1 - factor) + color2[0] * factor)
                     g = int(color1[1] * (1 - factor) + color2[1] * factor)
@@ -562,10 +684,12 @@ class FontImageMaker:
                     image.putpixel((x, y), (r, g, b, a))
                     
         elif gradient_type == "Circular":
-            # Circular gradient with angle offset
+            # Circular gradient with angle offset and gradient size control
             import math
             center_x, center_y = width // 2, height // 2
-            max_distance = max(width, height) // 2
+            
+            # Calculate gradient size factor
+            size_factor = gradient_size / 100.0
             
             for y in range(height):
                 for x in range(width):
@@ -577,6 +701,20 @@ class FontImageMaker:
                     
                     # Use angle as factor
                     factor = pixel_angle / 360
+                    
+                    # Apply gradient size control
+                    if size_factor < 1.0:
+                        # Create sharp transitions by compressing the gradient range
+                        gradient_range = size_factor
+                        transition_point = 0.5  # Center point for the transition
+                        
+                        if factor < transition_point - gradient_range / 2:
+                            factor = 0
+                        elif factor > transition_point + gradient_range / 2:
+                            factor = 1
+                        else:
+                            # Remap to 0-1 within the gradient range
+                            factor = (factor - (transition_point - gradient_range / 2)) / gradient_range
                     
                     r = int(color1[0] * (1 - factor) + color2[0] * factor)
                     g = int(color1[1] * (1 - factor) + color2[1] * factor)
@@ -616,7 +754,7 @@ class FontImageMaker:
             if self.bg_gradient_var.get() != "None":
                 bg_gradient = self.create_gradient(
                     (width, height), bg_color1_rgba, bg_color2_rgba,
-                    self.bg_gradient_var.get(), self.bg_gradient_angle_var.get()
+                    self.bg_gradient_var.get(), self.bg_gradient_angle_var.get(), 100
                 )
                 image = Image.alpha_composite(image, bg_gradient)
             else:
@@ -647,28 +785,37 @@ class FontImageMaker:
             text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
             
-            # Calculate position based on alignment
+            # Calculate position based on alignment and margins
+            margin_left = self.margin_left_var.get()
+            margin_right = self.margin_right_var.get()
+            margin_top = self.margin_top_var.get()
+            margin_bottom = self.margin_bottom_var.get()
+            
+            # Calculate available space for text positioning
+            available_width = width - margin_left - margin_right
+            available_height = height - margin_top - margin_bottom
+            
             alignment = self.alignment_var.get()
             if alignment == "nw":  # Top-left
-                x, y = 10, 10
+                x, y = margin_left, margin_top
             elif alignment == "n":  # Top-center
-                x, y = (width - text_width) // 2, 10
+                x, y = margin_left + (available_width - text_width) // 2, margin_top
             elif alignment == "ne":  # Top-right
-                x, y = width - text_width - 10, 10
+                x, y = width - margin_right - text_width, margin_top
             elif alignment == "w":  # Middle-left
-                x, y = 10, (height - text_height) // 2
+                x, y = margin_left, margin_top + (available_height - text_height) // 2
             elif alignment == "center":  # Center
-                x, y = (width - text_width) // 2, (height - text_height) // 2
+                x, y = margin_left + (available_width - text_width) // 2, margin_top + (available_height - text_height) // 2
             elif alignment == "e":  # Middle-right
-                x, y = width - text_width - 10, (height - text_height) // 2
+                x, y = width - margin_right - text_width, margin_top + (available_height - text_height) // 2
             elif alignment == "sw":  # Bottom-left
-                x, y = 10, height - text_height - 10
+                x, y = margin_left, height - margin_bottom - text_height
             elif alignment == "s":  # Bottom-center
-                x, y = (width - text_width) // 2, height - text_height - 10
+                x, y = margin_left + (available_width - text_width) // 2, height - margin_bottom - text_height
             elif alignment == "se":  # Bottom-right
-                x, y = width - text_width - 10, height - text_height - 10
+                x, y = width - margin_right - text_width, height - margin_bottom - text_height
             else:
-                x, y = (width - text_width) // 2, (height - text_height) // 2
+                x, y = margin_left + (available_width - text_width) // 2, margin_top + (available_height - text_height) // 2
             
             # Create separate layers for each effect
             glow_layer = Image.new('RGBA', (width, height), (0, 0, 0, 0))
@@ -691,7 +838,9 @@ class FontImageMaker:
                 glow_mask = glow_mask.filter(ImageFilter.GaussianBlur(radius=blur_radius))
                 
                 # Create colored glow image with proper intensity
-                glow_alpha = int(255 * glow_intensity / 100)
+                # Scale the percentage (0-100) to the internal range (0-400) for intensity calculation
+                actual_intensity = glow_intensity * 4  # Convert 0-100% to 0-400 range
+                glow_alpha = int(255 * actual_intensity / 100)
                 glow_colored = Image.new('RGBA', (width, height), glow_color + (0,))
                 
                 # Convert mask to alpha channel with intensity applied
@@ -738,20 +887,35 @@ class FontImageMaker:
                 mask_draw = ImageDraw.Draw(text_mask)
                 mask_draw.text((x, y), text, font=font, fill=255)
                 
-                # Create gradient for the full image size
+                # Calculate text bounding box for gradient sizing - use the actual position
+                text_bbox = draw.textbbox((x, y), text, font=font)
+                text_left = text_bbox[0]
+                text_top = text_bbox[1]
+                text_right = text_bbox[2]
+                text_bottom = text_bbox[3]
+                
+                text_actual_width = text_right - text_left
+                text_actual_height = text_bottom - text_top
+                
+                # Create gradient for just the text size
                 text_gradient = self.create_gradient(
-                    (width, height),
+                    (text_actual_width, text_actual_height),
                     text_color1 + (255,),
                     text_color2 + (255,),
                     self.text_gradient_var.get(),
-                    self.text_gradient_angle_var.get()
+                    self.text_gradient_angle_var.get(),
+                    self.text_gradient_size_var.get()
                 )
                 
+                # Create a full-size gradient image and paste the text-sized gradient at the actual text bounds
+                full_gradient = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+                full_gradient.paste(text_gradient, (text_left, text_top))
+                
                 # Apply the text mask to the gradient
-                text_gradient.putalpha(text_mask)
+                full_gradient.putalpha(text_mask)
                 
                 # Composite the gradient text
-                main_text_layer = Image.alpha_composite(main_text_layer, text_gradient)
+                main_text_layer = Image.alpha_composite(main_text_layer, full_gradient)
             else:
                 # Draw solid color text
                 main_text_draw.text((x, y), text, font=font, fill=text_color1 + (255,))
@@ -943,6 +1107,7 @@ class FontImageMaker:
                     'outline_thickness': self.outline_thickness_var.get(),
                     'text_gradient': self.text_gradient_var.get(),
                     'text_gradient_angle': self.text_gradient_angle_var.get(),
+                    'text_gradient_size': self.text_gradient_size_var.get(),
                     'bg_opacity': self.bg_opacity_var.get(),
                     'bg_color': self.bg_color_var.get(),
                     'bg_color2': self.bg_color2_var.get(),
@@ -950,6 +1115,10 @@ class FontImageMaker:
                     'bg_gradient_angle': self.bg_gradient_angle_var.get(),
                     'image_width': self.image_width_var.get(),
                     'image_height': self.image_height_var.get(),
+                    'margin_left': self.margin_left_var.get(),
+                    'margin_right': self.margin_right_var.get(),
+                    'margin_top': self.margin_top_var.get(),
+                    'margin_bottom': self.margin_bottom_var.get(),
                     'alignment': self.alignment_var.get()
                 }
                 
@@ -980,12 +1149,16 @@ class FontImageMaker:
                 self.text_color2_var.set(preset_data.get('text_color2', '#FFFFFF'))
                 self.text_outline_color_var.set(preset_data.get('text_outline_color', '#FFFFFF'))
                 self.text_glow_color_var.set(preset_data.get('text_glow_color', '#0000FF'))
-                self.glow_intensity_var.set(preset_data.get('glow_intensity', 50))
+                # Convert old glow intensity scale (0-400) to new scale (0-100) for backward compatibility
+                old_glow_intensity = preset_data.get('glow_intensity', 50)
+                new_glow_intensity = min(100, old_glow_intensity // 4) if old_glow_intensity > 100 else old_glow_intensity
+                self.glow_intensity_var.set(new_glow_intensity)
                 self.glow_radius_var.set(preset_data.get('glow_radius', 3))
                 self.glow_enabled_var.set(preset_data.get('glow_enabled', True))
                 self.outline_thickness_var.set(preset_data.get('outline_thickness', 2))
                 self.text_gradient_var.set(preset_data.get('text_gradient', 'None'))
                 self.text_gradient_angle_var.set(preset_data.get('text_gradient_angle', 0))
+                self.text_gradient_size_var.set(preset_data.get('text_gradient_size', 100))
                 self.bg_opacity_var.set(preset_data.get('bg_opacity', preset_data.get('bg_transparency', 100)))  # backward compatibility
                 self.bg_color_var.set(preset_data.get('bg_color', '#FFFFFF'))
                 self.bg_color2_var.set(preset_data.get('bg_color2', '#000000'))
@@ -993,6 +1166,10 @@ class FontImageMaker:
                 self.bg_gradient_angle_var.set(preset_data.get('bg_gradient_angle', 0))
                 self.image_width_var.set(preset_data.get('image_width', 800))
                 self.image_height_var.set(preset_data.get('image_height', 400))
+                self.margin_left_var.set(preset_data.get('margin_left', 10))
+                self.margin_right_var.set(preset_data.get('margin_right', 10))
+                self.margin_top_var.set(preset_data.get('margin_top', 10))
+                self.margin_bottom_var.set(preset_data.get('margin_bottom', 10))
                 self.alignment_var.set(preset_data.get('alignment', 'center'))
                 
                 # Update color buttons and preview
