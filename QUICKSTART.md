@@ -1,53 +1,159 @@
 # Quick Start Guide
 
-## 🚀 Getting Started in 3 Steps
+Get started with Font Image Maker in just a few minutes!
 
-### Step 1: Launch the Application
-**Windows Users:**
-- Double-click `run_app.bat` OR
+## Installation & Launch
+
+### Windows Users (Recommended)
+**Option 1: One-Click Launch**
+- Double-click `run_app.bat` in the project folder
+- The launcher will automatically install dependencies and start the app
+
+**Option 2: PowerShell Launch**
 - Right-click `run_app.ps1` → "Run with PowerShell"
+- Allows for better error handling and progress display
 
-**Manual Launch:**
-```bash
-python font_image_maker.py
-```
+### Manual Launch (All Platforms)
+1. Open terminal/command prompt in the project folder
+2. Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+3. Run the application:
+    ```bash
+    python font_image_maker.py
+    ```
 
-### Step 2: Create Your Text Image
-1. **Enter your text** in the "Text" field
-2. **Choose colors** by clicking the color buttons
-3. **Select a font** from the dropdown
-4. **Adjust size** using the size spinner
-5. **Watch the live preview** update automatically
+## Create Your First Image
 
-### Step 3: Export Your Image
-- Click **"Save Image"** to save as PNG/JPEG
-- Click **"Copy to Clipboard"** to paste elsewhere
+### Step 1: Enter Your Text
+- Type your message in the **"Text"** field at the top
+- See it appear instantly in the preview area
 
-## 🎨 Quick Styling Tips
+### Step 2: Choose Your Style
+- **Font**: Select from the dropdown or click "Upload Font" for custom fonts
+- **Size**: Use the spinner control (8-200pt)
+- **Colors**: Click color buttons to open the color picker
+- **Effects**: Try outline thickness and glow settings
+
+### Step 3: Perfect the Background
+- **Transparency**: Adjust the percentage for overlay effects
+- **Colors**: Set solid colors or create gradients
+- **Size**: Set custom image dimensions in pixels
+
+### Step 4: Position & Align
+- Use the **3×3 alignment grid** to position your text:
+  ```
+  ┌─────┬─────┬─────┐
+  │ TL  │ TC  │ TR  │ ← Top Row
+  ├─────┼─────┼─────┤
+  │ ML  │ MC  │ MR  │ ← Middle Row
+  ├─────┼─────┼─────┤
+  │ BL  │ BC  │ BR  │ ← Bottom Row
+  └─────┴─────┴─────┘
+  ```
+
+### Step 5: Export Your Creation
+- **Save Image**: Choose format (PNG recommended for transparency)
+- **Copy to Clipboard**: Perfect for pasting into other applications
+
+## Styling Quick Reference
 
 ### Professional Look
-- Use dark text on light background
-- Add subtle outline (1-2px thickness)
-- Use low glow intensity (20-30%)
-- Keep it simple with solid colors
+```
+✓ Dark text on light background
+✓ Subtle outline (1-2px thickness)
+✓ Low glow intensity (20-30%)
+✓ Solid colors or subtle gradients
+✓ Center or left alignment
+```
 
 ### Eye-Catching Design
-- Use gradient backgrounds
-- Add glow effects with higher intensity (60-80%)
-- Increase glow radius for dramatic effects
-- Try contrasting color combinations
-- Use thicker outlines (3-5px) for bold text
+```
+✓ Bright gradient backgrounds
+✓ High glow intensity (60-80%)
+✓ Larger glow radius (10-15px)
+✓ Contrasting color combinations
+✓ Thick outlines (3-5px) for bold text
+```
 
-### Try the Sample Presets
-- Click **"Load Preset"**
-- Select `professional_preset.json` or `vibrant_preset.json`
-- See instant styling examples!
+### Logo/Branding Style
+```
+✓ Custom fonts (.ttf/.otf uploads)
+✓ Consistent color schemes
+✓ Transparent backgrounds
+✓ Precise alignment
+✓ Save as preset for reuse
+```
 
-## 🔧 Essential Features
+## Sample Workflows
 
-| Feature | Location | Purpose |
-|---------|----------|---------|
-| Text Input | Top of left panel | Type your text |
+### Quick Social Media Post
+1. Enter text: "Hello World!"
+2. Load preset: `vibrant_preset.json`
+3. Adjust size to 48pt
+4. Export as PNG
+5. **Time**: ~30 seconds
+
+### Professional Logo Text
+1. Upload custom font
+2. Load preset: `professional_preset.json`
+3. Set transparent background (0%)
+4. Fine-tune colors to brand
+5. Save new preset
+6. **Time**: ~2 minutes
+
+### Gaming/Streaming Overlay
+1. Enter text: "LIVE"
+2. Set large size (100pt+)
+3. Add bright glow effect
+4. Set transparent background
+5. Position in corner
+6. **Time**: ~1 minute
+
+## Essential Controls Reference
+
+| Control | Location | Purpose | Tip |
+|---------|----------|---------|-----|
+| **Text Input** | Top of left panel | Enter your message | Live preview updates as you type |
+| **Font Dropdown** | Text section | Choose typeface | Upload custom fonts for more options |
+| **Size Spinner** | Text section | Adjust font size (8-200pt) | Use larger sizes for better glow effects |
+| **Color Buttons** | Throughout interface | Open color picker | RGB values update automatically |
+| **Gradient Type** | Text & Background | Select gradient style | Try "Circular" for dramatic effects |
+| **Alignment Grid** | General section | Position text in image | Click buttons to see instant positioning |
+| **Transparency Slider** | Background section | Control background opacity | 0% = transparent, 100% = solid |
+| **Outline Thickness** | Text effects | Border width around text | Higher values work better with large fonts |
+| **Glow Controls** | Text effects | Create lighting effects | Combine intensity + radius for best results |
+
+## Included Presets
+
+### `professional_preset.json`
+- Clean, business-appropriate styling
+- Subtle effects and neutral colors
+- Perfect for presentations and documents
+
+### `vibrant_preset.json`
+- Bold, colorful design
+- Strong glow and gradient effects
+- Great for social media and gaming
+
+**Load presets by clicking "Load Preset" and selecting the .json file**
+
+## Pro Tips
+
+- **Performance**: Lower glow settings render faster
+- **Quality**: Use PNG format to preserve transparency
+- **Fonts**: Uploaded fonts are permanently saved in `fonts/` folder
+- **Presets**: Save your favorite styles for quick reuse
+- **Alignment**: Preview updates instantly when clicking alignment buttons
+- **Colors**: Try gradients with complementary colors for best results
+
+---
+
+**Next Steps**: 
+- Read `HELP.md` for detailed feature explanations
+- Experiment with different font and color combinations
+- Create and save your own preset styles!
 | Font Size | Below text | Adjust size with slider (8-200pt) |
 | Colors | Color buttons | Click to choose colors |
 | Glow Controls | Below colors | Adjust intensity (%) and radius (px) |
@@ -56,7 +162,7 @@ python font_image_maker.py
 | Alignment | 3×3 grid | Position your text |
 | Save Image | Bottom buttons | Export your creation |
 
-## 📁 File Structure
+## File Structure
 ```
 Font Image Maker/
 ├── font_image_maker.py     ← Main app
@@ -66,12 +172,11 @@ Font Image Maker/
 └── README.md             ← Full documentation
 ```
 
-## ❓ Need Help?
+## Need Help?
 - Read `HELP.md` for detailed instructions
-- Run `test_dependencies.py` to check setup
 - Check `README.md` for technical details
 
-## 🎯 Common Tasks
+## Common Tasks
 
 **Add Custom Font:**
 1. Click "Upload Font"
@@ -102,4 +207,4 @@ Font Image Maker/
 2. Choose contrasting outline color
 
 ---
-**Ready to create amazing text images? Launch the app and start designing!** 🎨
+**Ready to create amazing text images? Launch the app and start designing!**

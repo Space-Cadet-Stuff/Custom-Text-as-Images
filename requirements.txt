@@ -1,0 +1,9 @@
+# Font Image Maker Dependencies
+# Core image processing library
+Pillow>=8.0.0
+
+# Note: tkinter is included with Python standard library on most installations
+# If you encounter tkinter import errors, you may need to install it separately:
+# - Ubuntu/Debian: sudo apt-get install python3-tk
+# - CentOS/RHEL: sudo yum install tkinter
+# - macOS: tkinter is included with Python.org distributions

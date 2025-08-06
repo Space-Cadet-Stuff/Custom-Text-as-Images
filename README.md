@@ -1,102 +1,143 @@
 # Font Image Maker
 
-A desktop application that converts text to customizable images with extensive styling options.
+A powerful desktop application that converts text into beautiful, customizable images with extensive styling options including gradients, glows, outlines, and custom fonts.
 
 ## Features
 
-### Text Customization
-- **Text Outline Color**: RGB color picker for text outline
-- **Outline Thickness**: Adjustable thickness slider (0-10px)
-- **Text Glow**: RGB color picker with customizable glow effect
-- **Glow Intensity**: Adjustable intensity slider (0-100%)
-- **Glow Radius**: Adjustable radius slider (0-20px)
-- **Text Color(s)**: RGB color picker with gradient support
-- **Gradient Types**: None, Linear, Radial, Circular
-- **Gradient Angle**: Adjustable slider (0-360°) with degree display
-- **Font Selection**: Choose from system fonts or upload custom fonts
-- **Font Size**: Adjustable slider (8-200pt) with point display
+### Text Styling
+- **Typography**: Choose from system fonts or upload custom .ttf/.otf fonts
+- **Size Control**: Adjustable font size (8-200pt) with live preview
+- **Color Options**: Solid colors or gradients (Linear, Radial, Circular)
+- **Text Effects**: 
+   - Customizable outline with thickness control (0-10px)
+   - Glow effects with intensity and radius controls
+   - Multiple gradient types with angle adjustment (0-360°)
 
-### Background Customization
-- **Opacity**: Adjustable percentage slider (0-100%) with percentage display
-- **Background Color(s)**: RGB color picker with gradient support
-- **Gradient Types**: None, Linear, Radial, Circular
-- **Gradient Angle**: Adjustable slider (0-360°) with degree display
+### Background Control
+- **Transparency**: Adjustable opacity (0-100%) for overlay effects
+- **Colors**: Solid or gradient backgrounds
+- **Gradient Support**: Linear, Radial, and Circular gradients
+- **Custom Sizing**: Set exact image dimensions in pixels
 
-### General Settings
-- **Text Alignment**: 9-point alignment system (Top-Left, Top-Center, Top-Right, Middle-Left, Center, Middle-Right, Bottom-Left, Bottom-Center, Bottom-Right)
-- **Text Size**: Adjustable slider in points (8-200pt) with live display
-- **Image Size**: Custom width and height in pixels
+### Layout & Alignment
+- **Smart Alignment**: 9-point grid system for precise text positioning
+- **Custom Canvas**: Define exact image dimensions
+- **Real-time Preview**: See changes instantly as you design
 
-### Additional Features
-- **Font Management**: Upload and store custom fonts (.ttf, .otf)
-- **Export Options**: Save as PNG/JPEG or copy to clipboard
-- **Real-time Preview**: Live preview of text styling
-- **Preset Management**: Save and load styling presets
+### Export & Sharing
+- **Multiple Formats**: Save as PNG, JPEG, BMP, or TIFF
+- **Clipboard Support**: Copy images directly for pasting
+- **Preset System**: Save and load styling configurations
 
-## Requirements
+## Quick Start
 
-- Python 3.7+
-- tkinter (usually included with Python)
-- Pillow (PIL) for image processing
-- tkinter.colorchooser for color selection
+### Easy Launch (Windows)
+- **Double-click** `run_app.bat` for automatic setup
+- **Right-click** `run_app.ps1` → "Run with PowerShell"
 
-## Installation
+### Manual Installation
+1. Ensure Python 3.7+ is installed
+2. Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+3. Launch the application:
+    ```bash
+    python font_image_maker.py
+    ```
 
-1. Clone or download this repository
-2. Install required packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Run the application:
-   ```bash
-   python font_image_maker.py
-   ```
+## Usage Guide
 
-## Usage
+### Basic Workflow
+1. **Enter Text**: Type your message in the text input field
+2. **Style Your Text**: 
+    - Choose colors using the color picker buttons
+    - Select fonts from the dropdown or upload custom ones
+    - Adjust size, outline, and glow effects
+3. **Customize Background**: Set colors, gradients, and transparency
+4. **Position Text**: Use the 3×3 alignment grid
+5. **Preview & Export**: Watch live preview and save when satisfied
 
-1. **Enter Text**: Type your desired text in the text input field
-2. **Customize Appearance**: Use the various controls to style your text and background
-3. **Preview**: See real-time changes in the preview area
-4. **Export**: Save your image or copy to clipboard
+### Pro Tips
+- **Professional Look**: Use subtle outlines (1-2px) and low glow intensity
+- **Eye-catching Design**: Try gradient backgrounds with contrasting text
+- **Custom Fonts**: Upload .ttf or .otf files for unique typography
+- **Presets**: Save your favorite styles for quick reuse
 
-### Font Management
-- Click "Upload Font" to add custom .ttf or .otf font files
-- Uploaded fonts are stored in the `fonts/` directory
-- Custom fonts appear in the font dropdown after upload
-
-### Color Selection
-- Click any color button to open the color picker
-- RGB values are displayed and can be manually entered
-- Gradient colors can be set using the primary and secondary color options
-
-### Alignment Options
-- Use the 3x3 grid of alignment buttons to position text
-- Options include all combinations of Top/Middle/Bottom and Left/Center/Right
-
-## File Structure
+## Project Structure
 
 ```
 Font Image Maker/
-├── font_image_maker.py     # Main application file
-├── requirements.txt        # Python dependencies
-├── fonts/                  # Custom fonts directory
-├── presets/               # Saved styling presets
-└── README.md              # This file
+├── font_image_maker.py         # Main application
+├── requirements.txt            # Python dependencies
+├── run_app.bat                # Windows launcher (batch)
+├── run_app.ps1                # Windows launcher (PowerShell)
+├── README.md                  # Project documentation
+├── QUICKSTART.md              # Quick start guide
+├── HELP.md                    # Detailed help documentation
+├── fonts/                     # Custom fonts storage
+├── presets/                   # Saved styling presets
+│   ├── professional_preset.json
+│   └── vibrant_preset.json
+└── __pycache__/              # Python cache files
 ```
 
-## Supported File Formats
+## System Requirements
 
-### Input
-- **Fonts**: .ttf, .otf
-- **Presets**: .json
+- **Python**: 3.7 or higher
+- **Operating System**: Windows, macOS, or Linux
+- **Dependencies**: See `requirements.txt`
+- **Note**: tkinter is included with most Python installations
 
-### Output
+## Supported Formats
+
+### Input Files
+- **Fonts**: .ttf, .otf (TrueType and OpenType fonts)
+- **Presets**: .json (styling configuration files)
+
+### Output Files
 - **Images**: .png, .jpg, .jpeg, .bmp, .tiff
-- **Clipboard**: PNG format
+- **Clipboard**: PNG format for direct pasting
 
 ## Troubleshooting
 
 ### Common Issues
+
+**"tkinter not found" Error**
+- **Windows**: Reinstall Python with "tcl/tk and IDLE" option checked
+- **Ubuntu/Debian**: `sudo apt-get install python3-tk`
+- **CentOS/RHEL**: `sudo yum install tkinter`
+
+**Font Upload Issues**
+- Ensure font files are .ttf or .otf format
+- Check file permissions in the `fonts/` directory
+- Try restarting the application after font installation
+
+**Performance Issues**
+- Reduce glow radius and intensity for better performance
+- Use smaller image dimensions for faster rendering
+- Close other applications to free up memory
+
+**Launcher Problems**
+- Try running `python font_image_maker.py` directly
+- Check Python installation: `python --version`
+- Manually install Pillow: `pip install Pillow>=8.0.0`
+
+## Contributing
+
+This is an open-source project. Feel free to:
+- Report bugs and issues
+- Suggest new features
+- Submit improvements
+- Share your presets
+
+## License
+
+This project is open source. See the project repository for license details.
+
+---
+
+**Need help?** Check out `QUICKSTART.md` for a quick tutorial or `HELP.md` for detailed documentation.
 
 1. **Font not loading**: Ensure font file is valid .ttf or .otf format
 2. **Preview not updating**: Check that all required fields are filled
