@@ -85,7 +85,7 @@ Font Image Maker/
 ## System Requirements
 
 - **Python**: 3.7 or higher
-- **Operating System**: Windows, macOS, or Linux
+- **Operating System**: Windows, macOS, or Linux (I think, only tested on windows)
 - **Dependencies**: See `requirements.txt`
 - **Note**: tkinter is included with most Python installations
 
