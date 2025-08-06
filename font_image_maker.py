@@ -15,6 +15,7 @@ import tempfile
 import math
 import re
 import subprocess
+import numpy as np
 
 # Optional imports - may not be available on all systems
 try:
@@ -121,8 +122,20 @@ class FontImageMaker:
         self.available_fonts = []
         self.font_paths = {}
         
+        # Font cache for performance optimization
+        self._font_cache = {}
+        self._font_cache_max_size = 10  # Maximum number of cached fonts
+        
+        # Color conversion cache for performance
+        self._color_cache = {}
+        self._color_cache_max_size = 50
+        
         # Current preview image
         self.preview_image = None
+        
+        # Debouncing for preview updates to improve performance
+        self._preview_update_id = None
+        self._preview_update_delay = 150  # milliseconds
     
     def create_directories(self):
         """Create necessary directories"""
@@ -300,7 +313,7 @@ class FontImageMaker:
         ttk.Label(text_frame, text="Text:").grid(row=0, column=0, sticky=tk.W, pady=2)
         text_entry = ttk.Entry(text_frame, textvariable=self.text_var, width=30)
         text_entry.grid(row=0, column=1, columnspan=2, sticky=tk.EW, pady=2)
-        text_entry.bind('<KeyRelease>', lambda e: self.update_preview())
+        text_entry.bind('<KeyRelease>', lambda e: self.update_preview_debounced())
         
         # Preset selector
         ttk.Label(text_frame, text="Preset:").grid(row=1, column=0, sticky=tk.W, pady=2)
@@ -322,7 +335,7 @@ class FontImageMaker:
         size_frame.grid(row=2, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
         size_scale = ttk.Scale(size_frame, from_=8, to=200, orient=tk.HORIZONTAL,
-                              variable=self.font_size_var, command=lambda v: self.update_preview())
+                              variable=self.font_size_var, command=lambda v: self.update_preview_debounced())
         size_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         # Add unit label
@@ -375,7 +388,7 @@ class FontImageMaker:
         gradient_angle_frame.grid(row=7, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
         angle_scale = ttk.Scale(gradient_angle_frame, from_=0, to=360, orient=tk.HORIZONTAL, 
-                              variable=self.text_gradient_angle_var, command=lambda v: self.update_preview())
+                              variable=self.text_gradient_angle_var, command=lambda v: self.update_preview_debounced())
         angle_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         ttk.Label(gradient_angle_frame, text="°").pack(side=tk.RIGHT, padx=(1, 5))
@@ -391,7 +404,7 @@ class FontImageMaker:
         gradient_size_frame.grid(row=8, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
         gradient_size_scale = ttk.Scale(gradient_size_frame, from_=0, to=100, orient=tk.HORIZONTAL, 
-                                      variable=self.text_gradient_size_var, command=lambda v: self.update_preview())
+                                      variable=self.text_gradient_size_var, command=lambda v: self.update_preview_debounced())
         gradient_size_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         ttk.Label(gradient_size_frame, text="%").pack(side=tk.RIGHT, padx=(1, 5))
@@ -415,7 +428,7 @@ class FontImageMaker:
         outline_frame.grid(row=10, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
         outline_scale = ttk.Scale(outline_frame, from_=0, to=10, orient=tk.HORIZONTAL,
-                                variable=self.outline_thickness_var, command=lambda v: self.update_preview())
+                                variable=self.outline_thickness_var, command=lambda v: self.update_preview_debounced())
         outline_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         ttk.Label(outline_frame, text="px").pack(side=tk.RIGHT, padx=(1, 5))
@@ -443,7 +456,7 @@ class FontImageMaker:
         glow_intensity_frame.grid(row=12, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
         glow_intensity_scale = ttk.Scale(glow_intensity_frame, from_=0, to=100, orient=tk.HORIZONTAL,
-                                       variable=self.glow_intensity_var, command=lambda v: self.update_preview())
+                                       variable=self.glow_intensity_var, command=lambda v: self.update_preview_debounced())
         glow_intensity_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         ttk.Label(glow_intensity_frame, text="%").pack(side=tk.RIGHT, padx=(1, 5))
@@ -459,7 +472,7 @@ class FontImageMaker:
         glow_radius_frame.grid(row=13, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
         glow_radius_scale = ttk.Scale(glow_radius_frame, from_=0, to=20, orient=tk.HORIZONTAL,
-                                    variable=self.glow_radius_var, command=lambda v: self.update_preview())
+                                    variable=self.glow_radius_var, command=lambda v: self.update_preview_debounced())
         glow_radius_scale.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         ttk.Label(glow_radius_frame, text="px").pack(side=tk.RIGHT, padx=(1, 5))
@@ -1127,16 +1140,31 @@ class FontImageMaker:
         self.bg_color2_btn.configure(bg=self.bg_color2_var.get())
     
     def hex_to_rgb(self, hex_color):
-        """Convert hex color to RGB tuple"""
+        """Convert hex color to RGB tuple with caching"""
+        # Check cache first
+        if hex_color in self._color_cache:
+            return self._color_cache[hex_color]
+        
+        # Convert color
         try:
-            hex_color = hex_color.lstrip('#')
-            if len(hex_color) != 6:
+            hex_color_clean = hex_color.lstrip('#')
+            if len(hex_color_clean) != 6:
                 # Invalid hex color, return black as fallback
-                return (0, 0, 0)
-            return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+                rgb = (0, 0, 0)
+            else:
+                rgb = tuple(int(hex_color_clean[i:i+2], 16) for i in (0, 2, 4))
         except (ValueError, TypeError):
             # Return black as fallback for any conversion errors
-            return (0, 0, 0)
+            rgb = (0, 0, 0)
+        
+        # Cache the result, but limit cache size
+        if len(self._color_cache) >= self._color_cache_max_size:
+            # Remove oldest color from cache (simple FIFO)
+            oldest_key = next(iter(self._color_cache))
+            del self._color_cache[oldest_key]
+        
+        self._color_cache[hex_color] = rgb
+        return rgb
     
     def get_font_path(self, font_name):
         """Get the path to a font file"""
@@ -1156,8 +1184,43 @@ class FontImageMaker:
         # For unknown fonts, return None (will use default)
         return None
     
+    def get_cached_font(self, font_name, font_size):
+        """Get a cached font or create and cache a new one"""
+        cache_key = (font_name, font_size)
+        
+        # Check if font is already cached
+        if cache_key in self._font_cache:
+            return self._font_cache[cache_key]
+        
+        # Get font path
+        font_path = self.get_font_path(font_name)
+        
+        try:
+            if font_path:
+                font = ImageFont.truetype(font_path, font_size)
+            else:
+                # Try to use system font or default
+                try:
+                    if platform.system() == "Windows":
+                        font = ImageFont.truetype("arial.ttf", font_size)
+                    else:
+                        font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", font_size)
+                except:
+                    font = ImageFont.load_default()
+        except:
+            font = ImageFont.load_default()
+        
+        # Cache the font, but limit cache size
+        if len(self._font_cache) >= self._font_cache_max_size:
+            # Remove oldest font from cache (simple FIFO)
+            oldest_key = next(iter(self._font_cache))
+            del self._font_cache[oldest_key]
+        
+        self._font_cache[cache_key] = font
+        return font
+    
     def create_gradient(self, size, color1, color2, gradient_type, angle, gradient_size=100):
-        """Create a gradient image with controllable gradient size"""
+        """Create a gradient image with controllable gradient size - optimized with NumPy"""
         width, height = size
         
         # Validate input parameters to prevent division by zero
@@ -1171,146 +1234,218 @@ class FontImageMaker:
             gradient_size = 100
             angle = 0
         
+        # Use NumPy for vectorized operations - much faster than pixel-by-pixel
+        try:
+            # Create coordinate arrays
+            x = np.arange(width, dtype=np.float32)
+            y = np.arange(height, dtype=np.float32)
+            X, Y = np.meshgrid(x, y)
+            
+            if gradient_type == "None":
+                # Solid color - create uniform array
+                factor = np.zeros((height, width), dtype=np.float32)
+            elif gradient_type == "Linear":
+                # Linear gradient with proper angle support and gradient size control
+                angle_rad = math.radians(angle)
+                dx = math.cos(angle_rad)
+                dy = math.sin(angle_rad)
+                
+                # Center coordinates
+                half_width = width / 2
+                half_height = height / 2
+                
+                # Calculate relative positions
+                rel_x = X - half_width
+                rel_y = Y - half_height
+                
+                # Calculate projection onto gradient direction
+                projection = rel_x * dx + rel_y * dy
+                
+                # Find the maximum projection distance
+                max_proj = abs(half_width * dx) + abs(half_height * dy)
+                if max_proj == 0:
+                    max_proj = 1
+                
+                # Normalize to 0-1 range
+                factor = (projection + max_proj) / (2 * max_proj)
+                factor = np.clip(factor, 0, 1)
+                
+                # Apply gradient size control
+                if gradient_size < 100:
+                    size_factor = gradient_size / 100.0
+                    center = 0.5
+                    gradient_range = size_factor
+                    
+                    # Vectorized gradient size control
+                    mask_low = factor < (center - gradient_range / 2)
+                    mask_high = factor > (center + gradient_range / 2)
+                    mask_mid = ~(mask_low | mask_high)
+                    
+                    factor[mask_low] = 0
+                    factor[mask_high] = 1
+                    factor[mask_mid] = (factor[mask_mid] - (center - gradient_range / 2)) / max(gradient_range, 0.001)
+                    
+            elif gradient_type == "Radial":
+                # Radial gradient from center with gradient size control
+                center_x, center_y = width // 2, height // 2
+                max_distance = max(width, height) // 2
+                
+                if max_distance == 0:
+                    max_distance = 1
+                
+                # Calculate distance from center
+                distance = np.sqrt((X - center_x) ** 2 + (Y - center_y) ** 2)
+                factor = np.minimum(distance / max_distance, 1.0)
+                
+                # Apply gradient size control
+                if gradient_size < 100:
+                    size_factor = gradient_size / 100.0
+                    factor = np.minimum(factor / max(size_factor, 0.001), 1.0)
+                    
+            elif gradient_type == "Circular":
+                # Circular gradient with angle offset and gradient size control
+                center_x, center_y = width // 2, height // 2
+                
+                # Calculate angle from center
+                dx = X - center_x
+                dy = Y - center_y
+                pixel_angle = np.degrees(np.arctan2(dy, dx)) + angle
+                pixel_angle = pixel_angle % 360
+                
+                # Use angle as factor
+                factor = pixel_angle / 360
+                
+                # Apply gradient size control
+                if gradient_size < 100:
+                    size_factor = gradient_size / 100.0
+                    transition_point = 0.5
+                    gradient_range = size_factor
+                    
+                    mask_low = factor < (transition_point - gradient_range / 2)
+                    mask_high = factor > (transition_point + gradient_range / 2)
+                    mask_mid = ~(mask_low | mask_high)
+                    
+                    factor[mask_low] = 0
+                    factor[mask_high] = 1
+                    factor[mask_mid] = (factor[mask_mid] - (transition_point - gradient_range / 2)) / max(gradient_range, 0.001)
+            else:
+                # Default to solid color
+                factor = np.zeros((height, width), dtype=np.float32)
+            
+            # Convert colors to numpy arrays for vectorized blending
+            color1_array = np.array(color1[:3], dtype=np.float32)
+            color2_array = np.array(color2[:3], dtype=np.float32)
+            
+            # Vectorized color blending
+            factor_3d = factor[:, :, np.newaxis]  # Add channel dimension
+            rgb = color1_array * (1 - factor_3d) + color2_array * factor_3d
+            rgb = np.clip(rgb, 0, 255).astype(np.uint8)
+            
+            # Handle alpha channel
+            if len(color1) > 3 and len(color2) > 3:
+                alpha1, alpha2 = color1[3], color2[3]
+                alpha = alpha1 * (1 - factor) + alpha2 * factor
+                alpha = np.clip(alpha, 0, 255).astype(np.uint8)
+                rgba = np.dstack([rgb, alpha])
+            else:
+                alpha = np.full((height, width), 255, dtype=np.uint8)
+                rgba = np.dstack([rgb, alpha])
+            
+            # Convert to PIL Image
+            return Image.fromarray(rgba, 'RGBA')
+            
+        except ImportError:
+            # Fallback to original pixel-by-pixel method if NumPy is not available
+            return self._create_gradient_fallback(size, color1, color2, gradient_type, angle, gradient_size)
+        except Exception:
+            # Any other error, fallback to original method
+            return self._create_gradient_fallback(size, color1, color2, gradient_type, angle, gradient_size)
+    
+    def _create_gradient_fallback(self, size, color1, color2, gradient_type, angle, gradient_size=100):
+        """Fallback gradient creation method for when NumPy is not available"""
+        width, height = size
         image = Image.new('RGBA', size, (0, 0, 0, 0))
         
         if gradient_type == "None":
-            # Solid color
-            image = Image.new('RGBA', size, color1)
-        elif gradient_type == "Linear":
-            # Linear gradient with proper angle support and gradient size control
-            
-            # Convert angle to radians
-            angle_rad = math.radians(angle)
-            
-            # Calculate the direction vector
-            dx = math.cos(angle_rad)
-            dy = math.sin(angle_rad)
-            
-            # Calculate the projection range
-            half_width = width / 2
-            half_height = height / 2
-            
-            # Find the maximum projection distance
-            max_proj = abs(half_width * dx) + abs(half_height * dy)
-            
-            # Prevent division by zero
-            if max_proj == 0:
-                max_proj = 1
-            
-            # Calculate gradient size factor (0-1, where 0 is very sharp, 1 is full gradient)
-            size_factor = gradient_size / 100.0
-            
-            for y in range(height):
-                for x in range(width):
-                    # Calculate position relative to center
+            return Image.new('RGBA', size, color1)
+        
+        # Original pixel-by-pixel implementation as fallback
+        for y in range(height):
+            for x in range(width):
+                if gradient_type == "Linear":
+                    angle_rad = math.radians(angle)
+                    dx = math.cos(angle_rad)
+                    dy = math.sin(angle_rad)
+                    
+                    half_width = width / 2
+                    half_height = height / 2
+                    
                     rel_x = x - half_width
                     rel_y = y - half_height
                     
-                    # Calculate projection onto gradient direction
                     projection = rel_x * dx + rel_y * dy
+                    max_proj = abs(half_width * dx) + abs(half_height * dy)
+                    if max_proj == 0:
+                        max_proj = 1
                     
-                    # Normalize to 0-1 range
                     factor = (projection + max_proj) / (2 * max_proj)
                     factor = max(0, min(1, factor))
                     
-                    # Apply gradient size control
-                    if size_factor < 1.0:
-                        # Compress the gradient range
-                        center = 0.5
-                        gradient_range = size_factor
-                        
-                        # Map factor to compressed range around center
-                        if factor < center - gradient_range / 2:
-                            factor = 0
-                        elif factor > center + gradient_range / 2:
-                            factor = 1
-                        else:
-                            # Remap to 0-1 within the gradient range
-                            factor = (factor - (center - gradient_range / 2)) / max(gradient_range, 0.001)  # Prevent division by zero
+                elif gradient_type == "Radial":
+                    center_x, center_y = width // 2, height // 2
+                    max_distance = max(width, height) // 2
+                    if max_distance == 0:
+                        max_distance = 1
                     
-                    # Blend colors
-                    r = int(color1[0] * (1 - factor) + color2[0] * factor)
-                    g = int(color1[1] * (1 - factor) + color2[1] * factor)
-                    b = int(color1[2] * (1 - factor) + color2[2] * factor)
-                    a = int(color1[3] * (1 - factor) + color2[3] * factor) if len(color1) > 3 else 255
-                    
-                    image.putpixel((x, y), (r, g, b, a))
-                    
-        elif gradient_type == "Radial":
-            # Radial gradient from center with gradient size control
-            center_x, center_y = width // 2, height // 2
-            max_distance = max(width, height) // 2
-            
-            # Prevent division by zero
-            if max_distance == 0:
-                max_distance = 1
-            
-            # Calculate gradient size factor
-            size_factor = gradient_size / 100.0
-            
-            for y in range(height):
-                for x in range(width):
                     distance = ((x - center_x) ** 2 + (y - center_y) ** 2) ** 0.5
                     factor = min(distance / max_distance, 1.0)
                     
-                    # Apply gradient size control
-                    if size_factor < 1.0:
-                        # Compress the gradient range
-                        gradient_range = size_factor
-                        
-                        if factor > gradient_range:
-                            factor = 1
-                        else:
-                            # Remap to 0-1 within the gradient range
-                            factor = factor / max(gradient_range, 0.001)  # Prevent division by zero
-                    
-                    r = int(color1[0] * (1 - factor) + color2[0] * factor)
-                    g = int(color1[1] * (1 - factor) + color2[1] * factor)
-                    b = int(color1[2] * (1 - factor) + color2[2] * factor)
-                    a = int(color1[3] * (1 - factor) + color2[3] * factor) if len(color1) > 3 else 255
-                    
-                    image.putpixel((x, y), (r, g, b, a))
-                    
-        elif gradient_type == "Circular":
-            # Circular gradient with angle offset and gradient size control
-            center_x, center_y = width // 2, height // 2
-            
-            # Calculate gradient size factor
-            size_factor = gradient_size / 100.0
-            
-            for y in range(height):
-                for x in range(width):
-                    # Calculate angle from center
+                elif gradient_type == "Circular":
+                    center_x, center_y = width // 2, height // 2
                     dx = x - center_x
                     dy = y - center_y
                     pixel_angle = math.degrees(math.atan2(dy, dx)) + angle
                     pixel_angle = pixel_angle % 360
-                    
-                    # Use angle as factor
                     factor = pixel_angle / 360
+                else:
+                    factor = 0
+                
+                # Apply gradient size control
+                if gradient_size < 100:
+                    size_factor = gradient_size / 100.0
+                    center = 0.5
+                    gradient_range = size_factor
                     
-                    # Apply gradient size control
-                    if size_factor < 1.0:
-                        # Create sharp transitions by compressing the gradient range
-                        gradient_range = size_factor
-                        transition_point = 0.5  # Center point for the transition
-                        
-                        if factor < transition_point - gradient_range / 2:
-                            factor = 0
-                        elif factor > transition_point + gradient_range / 2:
-                            factor = 1
-                        else:
-                            # Remap to 0-1 within the gradient range
-                            factor = (factor - (transition_point - gradient_range / 2)) / max(gradient_range, 0.001)  # Prevent division by zero
-                    
-                    r = int(color1[0] * (1 - factor) + color2[0] * factor)
-                    g = int(color1[1] * (1 - factor) + color2[1] * factor)
-                    b = int(color1[2] * (1 - factor) + color2[2] * factor)
-                    a = int(color1[3] * (1 - factor) + color2[3] * factor) if len(color1) > 3 else 255
-                    
-                    image.putpixel((x, y), (r, g, b, a))
+                    if factor < center - gradient_range / 2:
+                        factor = 0
+                    elif factor > center + gradient_range / 2:
+                        factor = 1
+                    else:
+                        factor = (factor - (center - gradient_range / 2)) / max(gradient_range, 0.001)
+                
+                # Blend colors
+                r = int(color1[0] * (1 - factor) + color2[0] * factor)
+                g = int(color1[1] * (1 - factor) + color2[1] * factor)
+                b = int(color1[2] * (1 - factor) + color2[2] * factor)
+                a = int(color1[3] * (1 - factor) + color2[3] * factor) if len(color1) > 3 else 255
+                
+                image.putpixel((x, y), (r, g, b, a))
         
         return image
+    
+    def update_preview_debounced(self):
+        """Debounced version of update_preview to improve performance"""
+        # Cancel any pending preview update
+        if self._preview_update_id:
+            self.root.after_cancel(self._preview_update_id)
+        
+        # Schedule a new preview update
+        self._preview_update_id = self.root.after(self._preview_update_delay, self._do_update_preview)
+    
+    def _do_update_preview(self):
+        """Internal method that actually performs the preview update"""
+        self._preview_update_id = None
+        self.update_preview()
     
     def update_preview(self):
         """Update the preview image"""
@@ -1352,24 +1487,9 @@ class FontImageMaker:
                 bg_image = Image.new('RGBA', (width, height), bg_color1_rgba)
                 image = Image.alpha_composite(image, bg_image)
             
-            # Load font
+            # Load font with caching
             font_name = self.font_var.get()
-            font_path = self.get_font_path(font_name)
-            
-            try:
-                if font_path:
-                    font = ImageFont.truetype(font_path, font_size)
-                else:
-                    # Try to use system font or default
-                    try:
-                        if platform.system() == "Windows":
-                            font = ImageFont.truetype("arial.ttf", font_size)
-                        else:
-                            font = ImageFont.load_default()
-                    except:
-                        font = ImageFont.load_default()
-            except:
-                font = ImageFont.load_default()
+            font = self.get_cached_font(font_name, font_size)
             
             # Get text size
             bbox = draw.textbbox((0, 0), text, font=font)
