@@ -10,7 +10,7 @@
   "glow_radius": 20,
   "glow_enabled": true,
   "outline_thickness": 3,
-  "text_gradient": "None",
+  "text_gradient": "Linear",
   "text_gradient_angle": 90,
   "text_gradient_size": 60,
   "bg_opacity": 0,
