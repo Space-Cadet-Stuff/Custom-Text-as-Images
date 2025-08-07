@@ -68,8 +68,11 @@ class FontImageMaker:
         # Update color button appearances
         self.update_color_buttons()
         
-        # Load system fonts
+        # Load fonts from configured directories
         self.load_fonts()
+        
+        # Update directory info display
+        self.update_directory_info()
         
         # Load available presets
         self.load_preset_list()
@@ -134,6 +137,9 @@ class FontImageMaker:
         self.available_fonts = []
         self.font_paths = {}
         
+        # Font directories
+        self.font_directories = []  # List of directories to load fonts from
+        
         # Font cache for performance optimization
         self._font_cache = {}
         self._font_cache_max_size = 10  # Maximum number of cached fonts
@@ -153,6 +159,15 @@ class FontImageMaker:
         """Create necessary directories"""
         os.makedirs("fonts", exist_ok=True)
         os.makedirs("presets", exist_ok=True)
+        
+        # Load font directories from config file
+        self.load_font_directories_config()
+        
+        # If no directories are configured, use the default fonts directory
+        if not self.font_directories:
+            default_fonts_dir = os.path.abspath("fonts")
+            self.font_directories = [default_fonts_dir]
+            self.save_font_directories_config()
     
     def setup_gui(self):
         """Setup the main GUI"""
@@ -375,29 +390,42 @@ class FontImageMaker:
         upload_font_btn = ttk.Button(font_frame, text="Upload Font", command=self.upload_font)
         upload_font_btn.pack(side=tk.RIGHT)
         
-        # Add blank line after Font
-        ttk.Label(text_frame, text="").grid(row=3, column=3, pady=5)
+        # Font directories management
+        ttk.Label(text_frame, text="Font Directories:").grid(row=4, column=0, sticky=tk.W, pady=2)
+        
+        directories_frame = ttk.Frame(text_frame)
+        directories_frame.grid(row=4, column=1, columnspan=2, sticky=tk.EW, pady=2)
+        
+        # Show current number of directories
+        self.directories_info_label = ttk.Label(directories_frame, text="0 directories")
+        self.directories_info_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        
+        manage_dirs_btn = ttk.Button(directories_frame, text="Manage Directories", command=self.manage_font_directories)
+        manage_dirs_btn.pack(side=tk.RIGHT)
+        
+        # Add blank line after Font Directories
+        ttk.Label(text_frame, text="").grid(row=4, column=3, pady=5)
         
         # Text colors
-        ttk.Label(text_frame, text="Primary Color:").grid(row=4, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Primary Color:").grid(row=5, column=0, sticky=tk.W, pady=2)
         self.text_color_btn = tk.Button(text_frame, width=10, command=lambda: self.choose_color(self.text_color_var, self.text_color_btn))
-        self.text_color_btn.grid(row=4, column=1, sticky=tk.W, pady=2)
+        self.text_color_btn.grid(row=5, column=1, sticky=tk.W, pady=2)
         
-        ttk.Label(text_frame, text="Secondary Color\n(Optional):").grid(row=5, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Secondary Color\n(Optional):").grid(row=6, column=0, sticky=tk.W, pady=2)
         self.text_color2_btn = tk.Button(text_frame, width=10, command=lambda: self.choose_color(self.text_color2_var, self.text_color2_btn))
-        self.text_color2_btn.grid(row=5, column=1, sticky=tk.W, pady=2)
+        self.text_color2_btn.grid(row=6, column=1, sticky=tk.W, pady=2)
         
         # Text gradient
-        ttk.Label(text_frame, text="Gradient Type:").grid(row=6, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Gradient Type:").grid(row=7, column=0, sticky=tk.W, pady=2)
         gradient_combo = ttk.Combobox(text_frame, textvariable=self.text_gradient_var, 
                                     values=["None", "Linear", "Radial", "Circular"], state="readonly", width=15)
-        gradient_combo.grid(row=6, column=1, sticky=tk.W, pady=2)
+        gradient_combo.grid(row=7, column=1, sticky=tk.W, pady=2)
         gradient_combo.bind('<<ComboboxSelected>>', lambda e: self.update_preview())
         
         # Gradient angle
-        ttk.Label(text_frame, text="Gradient Angle:").grid(row=7, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Gradient Angle:").grid(row=8, column=0, sticky=tk.W, pady=2)
         gradient_angle_frame = ttk.Frame(text_frame)
-        gradient_angle_frame.grid(row=7, column=1, columnspan=2, sticky=tk.EW, pady=2)
+        gradient_angle_frame.grid(row=8, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
         angle_scale = ttk.Scale(gradient_angle_frame, from_=0, to=360, orient=tk.HORIZONTAL, 
                               variable=self.text_gradient_angle_var, command=lambda v: self.update_preview_debounced())
@@ -411,9 +439,9 @@ class FontImageMaker:
         self.gradient_angle_entry.bind('<FocusOut>', lambda e: self.update_preview())
         
         # Gradient size
-        ttk.Label(text_frame, text="Gradient Width:").grid(row=8, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Gradient Width:").grid(row=9, column=0, sticky=tk.W, pady=2)
         gradient_size_frame = ttk.Frame(text_frame)
-        gradient_size_frame.grid(row=8, column=1, columnspan=2, sticky=tk.EW, pady=2)
+        gradient_size_frame.grid(row=9, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
         gradient_size_scale = ttk.Scale(gradient_size_frame, from_=0, to=100, orient=tk.HORIZONTAL, 
                                       variable=self.text_gradient_size_var, command=lambda v: self.update_preview_debounced())
@@ -427,17 +455,17 @@ class FontImageMaker:
         self.gradient_size_entry.bind('<FocusOut>', lambda e: self.update_preview())
         
         # Add blank line after Gradient Width
-        ttk.Label(text_frame, text="").grid(row=8, column=3, pady=5)
+        ttk.Label(text_frame, text="").grid(row=9, column=3, pady=5)
         
         # Text outline
-        ttk.Label(text_frame, text="Outline Color:").grid(row=9, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Outline Color:").grid(row=10, column=0, sticky=tk.W, pady=2)
         self.outline_color_btn = tk.Button(text_frame, width=10, command=lambda: self.choose_color(self.text_outline_color_var, self.outline_color_btn))
-        self.outline_color_btn.grid(row=9, column=1, sticky=tk.W, pady=2)
+        self.outline_color_btn.grid(row=10, column=1, sticky=tk.W, pady=2)
         
         # Outline thickness
-        ttk.Label(text_frame, text="Outline\nThickness:").grid(row=10, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Outline\nThickness:").grid(row=11, column=0, sticky=tk.W, pady=2)
         outline_frame = ttk.Frame(text_frame)
-        outline_frame.grid(row=10, column=1, columnspan=2, sticky=tk.EW, pady=2)
+        outline_frame.grid(row=11, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
         outline_scale = ttk.Scale(outline_frame, from_=0, to=10, orient=tk.HORIZONTAL,
                                 variable=self.outline_thickness_var, command=lambda v: self.update_preview_debounced())
@@ -451,21 +479,21 @@ class FontImageMaker:
         self.outline_entry.bind('<FocusOut>', lambda e: self.update_preview())
         
         # Add blank line after Outline Thickness
-        ttk.Label(text_frame, text="").grid(row=10, column=3, pady=5)
+        ttk.Label(text_frame, text="").grid(row=11, column=3, pady=5)
         
         # Text glow
-        ttk.Label(text_frame, text="Glow Color:").grid(row=11, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Glow Color:").grid(row=12, column=0, sticky=tk.W, pady=2)
         self.glow_color_btn = tk.Button(text_frame, width=10, command=lambda: self.choose_color(self.text_glow_color_var, self.glow_color_btn))
-        self.glow_color_btn.grid(row=11, column=1, sticky=tk.W, pady=2)
+        self.glow_color_btn.grid(row=12, column=1, sticky=tk.W, pady=2)
         
         # Glow enable checkbox
         self.glow_enabled_cb = ttk.Checkbutton(text_frame, text="Enable Glow", variable=self.glow_enabled_var, command=self.update_preview)
-        self.glow_enabled_cb.grid(row=11, column=2, sticky=tk.W, pady=2)
+        self.glow_enabled_cb.grid(row=12, column=2, sticky=tk.W, pady=2)
         
         # Glow intensity
-        ttk.Label(text_frame, text="Glow Intensity:").grid(row=12, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Glow Intensity:").grid(row=13, column=0, sticky=tk.W, pady=2)
         glow_intensity_frame = ttk.Frame(text_frame)
-        glow_intensity_frame.grid(row=12, column=1, columnspan=2, sticky=tk.EW, pady=2)
+        glow_intensity_frame.grid(row=13, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
         glow_intensity_scale = ttk.Scale(glow_intensity_frame, from_=0, to=100, orient=tk.HORIZONTAL,
                                        variable=self.glow_intensity_var, command=lambda v: self.update_preview_debounced())
@@ -479,9 +507,9 @@ class FontImageMaker:
         self.glow_intensity_entry.bind('<FocusOut>', lambda e: self.update_preview())
         
         # Glow radius
-        ttk.Label(text_frame, text="Glow Radius:").grid(row=13, column=0, sticky=tk.W, pady=2)
+        ttk.Label(text_frame, text="Glow Radius:").grid(row=14, column=0, sticky=tk.W, pady=2)
         glow_radius_frame = ttk.Frame(text_frame)
-        glow_radius_frame.grid(row=13, column=1, columnspan=2, sticky=tk.EW, pady=2)
+        glow_radius_frame.grid(row=14, column=1, columnspan=2, sticky=tk.EW, pady=2)
         
         glow_radius_scale = ttk.Scale(glow_radius_frame, from_=0, to=20, orient=tk.HORIZONTAL,
                                     variable=self.glow_radius_var, command=lambda v: self.update_preview_debounced())
@@ -841,33 +869,15 @@ class FontImageMaker:
         copy_btn.pack(side=tk.LEFT, padx=5)
     
     def load_fonts(self):
-        """Load available fonts from system and custom directories"""
+        """Load available fonts from user-specified directories only"""
         all_fonts = {}  # Dictionary to store font name -> font path mapping
         
-        # System font directories by platform
-        system_font_dirs = []
-        if platform.system() == "Windows":
-            system_font_dirs = [
-                os.path.join(os.environ.get('WINDIR', 'C:/Windows'), 'Fonts'),
-                os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'Microsoft', 'Windows', 'Fonts')
-            ]
-        elif platform.system() == "Darwin":  # macOS
-            system_font_dirs = [
-                '/System/Library/Fonts',
-                '/Library/Fonts',
-                os.path.join(os.path.expanduser('~'), 'Library', 'Fonts')
-            ]
-        else:  # Linux
-            system_font_dirs = [
-                '/usr/share/fonts',
-                '/usr/local/share/fonts',
-                os.path.join(os.path.expanduser('~'), '.fonts'),
-                os.path.join(os.path.expanduser('~'), '.local', 'share', 'fonts')
-            ]
-        
-        # Load system fonts
-        for font_dir in system_font_dirs:
+        # Load fonts from all specified directories
+        for font_dir in self.font_directories:
             if os.path.exists(font_dir):
+                # Mark if this is the default fonts directory
+                is_default_dir = os.path.basename(font_dir).lower() == "fonts"
+                
                 for root, dirs, files in os.walk(font_dir):
                     for file in files:
                         if file.lower().endswith(('.ttf', '.otf')):
@@ -875,16 +885,20 @@ class FontImageMaker:
                             font_name = os.path.splitext(file)[0]
                             # Clean up font name (remove version numbers, etc.)
                             font_name = self._clean_font_name(font_name)
+                            
+                            # Add directory indicator if not from default directory
+                            if not is_default_dir:
+                                dir_name = os.path.basename(font_dir)
+                                font_name = f"{font_name} ({dir_name})"
+                            
+                            # Avoid duplicate names by adding a counter if needed
+                            original_name = font_name
+                            counter = 1
+                            while font_name in all_fonts:
+                                font_name = f"{original_name} ({counter})"
+                                counter += 1
+                            
                             all_fonts[font_name] = font_path
-        
-        # Load custom fonts from fonts directory
-        custom_fonts_dir = "fonts"
-        if os.path.exists(custom_fonts_dir):
-            for file in os.listdir(custom_fonts_dir):
-                if file.lower().endswith(('.ttf', '.otf')):
-                    font_path = os.path.join(custom_fonts_dir, file)
-                    font_name = os.path.splitext(file)[0] + " (Custom)"
-                    all_fonts[font_name] = font_path
         
         # Store the font mapping and create sorted list
         self.font_paths = all_fonts
@@ -892,20 +906,9 @@ class FontImageMaker:
         
         # Set default font
         if self.available_fonts:
-            # Try to find Arial or similar common font first
-            default_fonts = ['Arial', 'Helvetica', 'Times New Roman', 'Courier New']
-            default_set = False
-            for default_font in default_fonts:
-                matching_fonts = [f for f in self.available_fonts if default_font.lower() in f.lower()]
-                if matching_fonts:
-                    self.font_var.set(matching_fonts[0])
-                    self.font_display_label.config(text=matching_fonts[0])
-                    default_set = True
-                    break
-            
-            if not default_set:
-                self.font_var.set(self.available_fonts[0])
-                self.font_display_label.config(text=self.available_fonts[0])
+            # Just use the first available font as default
+            self.font_var.set(self.available_fonts[0])
+            self.font_display_label.config(text=self.available_fonts[0])
     
     def open_font_selector(self):
         """Open the font selection window"""
@@ -1100,7 +1103,58 @@ class FontImageMaker:
                 self.preset_var.set("None")
     
     def upload_font(self):
-        """Upload a new font file"""
+        """Upload a new font file to a selected directory"""
+        # First, let user choose which directory to upload to
+        if len(self.font_directories) == 1:
+            target_dir = self.font_directories[0]
+        else:
+            # Create a simple selection dialog for multiple directories
+            dir_window = tk.Toplevel(self.root)
+            dir_window.title("Select Target Directory")
+            dir_window.geometry("400x300")
+            dir_window.transient(self.root)
+            dir_window.grab_set()
+            
+            ttk.Label(dir_window, text="Select a directory to upload the font to:", padding=10).pack()
+            
+            selected_dir = tk.StringVar()
+            
+            # Create radio buttons for each directory
+            for directory in self.font_directories:
+                display_name = os.path.basename(directory) if directory != os.path.abspath("fonts") else "Default (fonts)"
+                ttk.Radiobutton(dir_window, text=f"{display_name}\n{directory}", 
+                              variable=selected_dir, value=directory).pack(anchor=tk.W, padx=20, pady=5)
+            
+            # Set default selection
+            if self.font_directories:
+                selected_dir.set(self.font_directories[0])
+            
+            # Buttons
+            button_frame = ttk.Frame(dir_window)
+            button_frame.pack(pady=20)
+            
+            result = {"cancelled": False, "directory": None}
+            
+            def select_and_continue():
+                result["directory"] = selected_dir.get()
+                dir_window.destroy()
+            
+            def cancel():
+                result["cancelled"] = True
+                dir_window.destroy()
+            
+            ttk.Button(button_frame, text="Continue", command=select_and_continue).pack(side=tk.LEFT, padx=5)
+            ttk.Button(button_frame, text="Cancel", command=cancel).pack(side=tk.LEFT, padx=5)
+            
+            # Wait for dialog to close
+            dir_window.wait_window()
+            
+            if result["cancelled"] or not result["directory"]:
+                return
+            
+            target_dir = result["directory"]
+        
+        # Now select the font file
         file_path = filedialog.askopenfilename(
             title="Select Font File",
             filetypes=[("Font files", "*.ttf *.otf"), ("All files", "*.*")]
@@ -1108,31 +1162,178 @@ class FontImageMaker:
         
         if file_path:
             try:
-                # Copy font to fonts directory
+                # Ensure target directory exists
+                os.makedirs(target_dir, exist_ok=True)
+                
+                # Copy font to target directory
                 filename = os.path.basename(file_path)
-                dest_path = os.path.join("fonts", filename)
+                dest_path = os.path.join(target_dir, filename)
+                
+                # Check if file already exists
+                if os.path.exists(dest_path):
+                    if not messagebox.askyesno("File Exists", f"Font '{filename}' already exists in this directory. Overwrite?"):
+                        return
+                
                 shutil.copy2(file_path, dest_path)
                 
                 # Reload fonts
                 self.load_fonts()
                 
-                # Select the new font (with Custom suffix)
-                font_name = os.path.splitext(filename)[0] + " (Custom)"
-                if font_name in self.available_fonts:
-                    self.font_var.set(font_name)
-                    self.font_display_label.config(text=font_name)
-                else:
-                    # Fallback to base name if custom suffix not found
-                    base_name = os.path.splitext(filename)[0]
-                    if base_name in self.available_fonts:
-                        self.font_var.set(base_name)
-                        self.font_display_label.config(text=base_name)
+                # Try to select the new font
+                font_name = os.path.splitext(filename)[0]
+                font_name = self._clean_font_name(font_name)
                 
-                messagebox.showinfo("Success", f"Font uploaded successfully!")
+                # Find the font in the available fonts list
+                for available_font in self.available_fonts:
+                    if font_name.lower() in available_font.lower():
+                        self.font_var.set(available_font)
+                        self.font_display_label.config(text=available_font)
+                        break
+                
+                messagebox.showinfo("Success", f"Font '{filename}' uploaded successfully to {os.path.basename(target_dir)}!")
                 self.update_preview()
                 
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to upload font: {str(e)}")
+    
+    def load_font_directories_config(self):
+        """Load font directories from configuration file"""
+        config_file = "font_directories.json"
+        try:
+            if os.path.exists(config_file):
+                with open(config_file, 'r') as f:
+                    data = json.load(f)
+                    self.font_directories = data.get('directories', [])
+                    # Validate that directories exist, remove non-existent ones
+                    self.font_directories = [d for d in self.font_directories if os.path.exists(d)]
+            else:
+                self.font_directories = []
+        except Exception as e:
+            print(f"Warning: Could not load font directories config: {e}")
+            self.font_directories = []
+    
+    def save_font_directories_config(self):
+        """Save font directories to configuration file"""
+        config_file = "font_directories.json"
+        try:
+            with open(config_file, 'w') as f:
+                json.dump({'directories': self.font_directories}, f, indent=2)
+        except Exception as e:
+            print(f"Warning: Could not save font directories config: {e}")
+    
+    def manage_font_directories(self):
+        """Open the font directory management window"""
+        dir_window = tk.Toplevel(self.root)
+        dir_window.title("Manage Font Directories")
+        dir_window.geometry("600x500")
+        dir_window.transient(self.root)
+        dir_window.grab_set()
+        
+        # Main frame
+        main_frame = ttk.Frame(dir_window, padding=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Instructions
+        ttk.Label(main_frame, text="Font Directories", font=("Arial", 12, "bold")).pack(pady=(0, 5))
+        ttk.Label(main_frame, text="Manage directories where fonts will be loaded from:").pack(pady=(0, 10))
+        
+        # Directory list frame
+        list_frame = ttk.Frame(main_frame)
+        list_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        
+        # Create listbox with scrollbar
+        list_scrollbar = ttk.Scrollbar(list_frame)
+        list_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        dir_listbox = tk.Listbox(list_frame, yscrollcommand=list_scrollbar.set)
+        dir_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        list_scrollbar.config(command=dir_listbox.yview)
+        
+        # Populate listbox
+        def refresh_list():
+            dir_listbox.delete(0, tk.END)
+            for directory in self.font_directories:
+                display_name = directory
+                if directory == os.path.abspath("fonts"):
+                    display_name += " (Default)"
+                dir_listbox.insert(tk.END, display_name)
+        
+        refresh_list()
+        
+        # Button frame
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X)
+        
+        # Add directory button
+        def add_directory():
+            directory = filedialog.askdirectory(title="Select Font Directory")
+            if directory and directory not in self.font_directories:
+                self.font_directories.append(directory)
+                refresh_list()
+        
+        # Remove directory button
+        def remove_directory():
+            selection = dir_listbox.curselection()
+            if selection:
+                index = selection[0]
+                directory = self.font_directories[index]
+                
+                # Don't allow removing the default fonts directory if it's the only one
+                if len(self.font_directories) == 1 and directory == os.path.abspath("fonts"):
+                    messagebox.showwarning("Cannot Remove", "Cannot remove the default fonts directory when it's the only one. Add another directory first.")
+                    return
+                
+                if messagebox.askyesno("Confirm Removal", f"Remove directory:\n{directory}"):
+                    self.font_directories.pop(index)
+                    refresh_list()
+        
+        # Browse to directory button
+        def browse_directory():
+            selection = dir_listbox.curselection()
+            if selection:
+                index = selection[0]
+                directory = self.font_directories[index]
+                if os.path.exists(directory):
+                    if platform.system() == "Windows":
+                        os.startfile(directory)
+                    elif platform.system() == "Darwin":  # macOS
+                        subprocess.run(["open", directory])
+                    else:  # Linux
+                        subprocess.run(["xdg-open", directory])
+                else:
+                    messagebox.showerror("Error", f"Directory does not exist:\n{directory}")
+        
+        ttk.Button(button_frame, text="Add Directory", command=add_directory).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(button_frame, text="Remove Selected", command=remove_directory).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Browse Selected", command=browse_directory).pack(side=tk.LEFT, padx=5)
+        
+        # Bottom buttons
+        bottom_frame = ttk.Frame(main_frame)
+        bottom_frame.pack(fill=tk.X, pady=(20, 0))
+        
+        def save_and_reload():
+            self.save_font_directories_config()
+            self.load_fonts()
+            self.update_directory_info()
+            messagebox.showinfo("Success", "Font directories saved and fonts reloaded!")
+            dir_window.destroy()
+        
+        def cancel():
+            # Reload from config to undo any changes
+            self.load_font_directories_config()
+            dir_window.destroy()
+        
+        ttk.Button(bottom_frame, text="Save & Reload Fonts", command=save_and_reload).pack(side=tk.RIGHT, padx=(5, 0))
+        ttk.Button(bottom_frame, text="Cancel", command=cancel).pack(side=tk.RIGHT)
+    
+    def update_directory_info(self):
+        """Update the directory info label"""
+        if hasattr(self, 'directories_info_label'):
+            count = len(self.font_directories)
+            if count == 1:
+                self.directories_info_label.config(text="1 directory")
+            else:
+                self.directories_info_label.config(text=f"{count} directories")
     
     def choose_color(self, color_var, button):
         """Open color chooser dialog"""
@@ -1211,14 +1412,8 @@ class FontImageMaker:
             if font_path:
                 font = ImageFont.truetype(font_path, font_size)
             else:
-                # Try to use system font or default
-                try:
-                    if platform.system() == "Windows":
-                        font = ImageFont.truetype("arial.ttf", font_size)
-                    else:
-                        font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", font_size)
-                except:
-                    font = ImageFont.load_default()
+                # Use default font if no custom font is available
+                font = ImageFont.load_default()
         except:
             font = ImageFont.load_default()
         
