@@ -31,7 +31,7 @@ Get started with Font Image Maker in just a few minutes!
 - See it appear instantly in the preview area
 
 ### Step 2: Choose Your Style
-- **Font**: Select from the dropdown or click "Upload Font" for custom fonts
+- **Font**: Select from a font or click "Upload Font" for custom fonts
 - **Size**: Use the spinner control (8-200pt)
 - **Colors**: Click color buttons to open the color picker
 - **Effects**: Try outline thickness and glow settings
@@ -86,31 +86,6 @@ Get started with Font Image Maker in just a few minutes!
 ✓ Save as preset for reuse
 ```
 
-## Sample Workflows
-
-### Quick Social Media Post
-1. Enter text: "Hello World!"
-2. Load preset: `vibrant_preset.json`
-3. Adjust size to 48pt
-4. Export as PNG
-5. **Time**: ~30 seconds
-
-### Professional Logo Text
-1. Upload custom font
-2. Load preset: `professional_preset.json`
-3. Set transparent background (0%)
-4. Fine-tune colors to brand
-5. Save new preset
-6. **Time**: ~2 minutes
-
-### Gaming/Streaming Overlay
-1. Enter text: "LIVE"
-2. Set large size (100pt+)
-3. Add bright glow effect
-4. Set transparent background
-5. Position in corner
-6. **Time**: ~1 minute
-
 ## Essential Controls Reference
 
 | Control | Location | Purpose | Tip |
@@ -136,6 +111,11 @@ Get started with Font Image Maker in just a few minutes!
 - Bold, colorful design
 - Strong glow and gradient effects
 - Great for social media and gaming
+
+### `vaporwave_preset.json`
+- 80s inspired design
+- Synthy vibes
+- Bit more niche but I love it
 
 **Load presets by clicking "Load Preset" and selecting the .json file**
 
